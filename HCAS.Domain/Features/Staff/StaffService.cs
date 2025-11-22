@@ -1,4 +1,4 @@
-﻿using HCAS.Domain.Features.Model.Staff;
+﻿using HCAS.Domain.Features.Staff.Models;
 using HCAS.Shared;
 
 namespace HCAS.Domain.Features.Staff

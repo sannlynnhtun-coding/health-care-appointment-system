@@ -33,14 +33,25 @@
                         </MudSelect>
                     </MudItem>
 
-                    <MudItem xs="12">
+                    <MudItem xs="12" md="6">
                         <MudDatePicker Label="Schedule Date"
-                                       @bind-Date="scheduleDate"
+                                       @bind-Date="scheduleDateValue"
                                        Required="true"
                                        RequiredError="Please select a schedule date"
                                        MinDate="DateTime.Today"
                                        Placeholder="Select schedule date"
                                        Variant="MudBlazor.Variant.Outlined" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField Label="Schedule Time"
+                                      @bind-Value="scheduleTimeValue"
+                                      InputType="InputType.Time"
+                                      Required="true"
+                                      RequiredError="Please select a schedule time"
+                                      Placeholder="Select time (HH:mm)"
+                                      Variant="MudBlazor.Variant.Outlined"
+                                      HelperText="Select the available time slot" />
                     </MudItem>
 
                     <MudItem xs="12">
@@ -93,7 +104,8 @@
     [Parameter] public DoctorScheduleResModel? Schedule { get; set; }
 
     private List<DoctorModel> Doctors = new List<DoctorModel>();
-    private DateTime? scheduleDate;
+    private DateTime? scheduleDateValue;
+    private string scheduleTimeValue = "09:00"; // Default time: 9:00 AM
     private int? doctorId;
     private int? maxPatients;
     private bool _loading = false;
@@ -109,12 +121,24 @@
         if (_isEdit && Schedule is not null)
         {
             doctorId = Schedule.DoctorId;
-            scheduleDate = Schedule.ScheduleDate;
+            scheduleDateValue = Schedule.ScheduleDate;
+            
+            // Extract time from schedule date
+            if (Schedule.ScheduleDate.HasValue)
+            {
+                scheduleTimeValue = Schedule.ScheduleDate.Value.ToString("HH:mm");
+            }
+            else
+            {
+                scheduleTimeValue = "09:00";
+            }
+            
             maxPatients = Schedule.MaxPatients;
         }
         else
         {
-            scheduleDate = DateTime.Today.AddDays(1); // Default to tomorrow
+            scheduleDateValue = DateTime.Today.AddDays(1); // Default to tomorrow
+            scheduleTimeValue = "09:00"; // Default time: 9:00 AM
             doctorId = null;
             maxPatients = null;
         }
@@ -140,9 +164,15 @@
             return;
         }
 
-        if (!scheduleDate.HasValue)
+        if (!scheduleDateValue.HasValue)
         {
             Snackbar.Add("Please select a schedule date", Severity.Error);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(scheduleTimeValue))
+        {
+            Snackbar.Add("Please select a schedule time", Severity.Error);
             return;
         }
 
@@ -152,12 +182,31 @@
             return;
         }
 
+        // Combine date and time
+        DateTime combinedDateTime;
+        if (TimeSpan.TryParse(scheduleTimeValue, out var timeSpan))
+        {
+            combinedDateTime = scheduleDateValue.Value.Date.Add(timeSpan);
+        }
+        else
+        {
+            Snackbar.Add("Invalid time format. Please use HH:mm format (e.g., 09:00)", Severity.Error);
+            return;
+        }
+
+        // Validate that combined date/time is not in the past
+        if (combinedDateTime < DateTime.Now)
+        {
+            Snackbar.Add("Schedule date and time cannot be in the past", Severity.Error);
+            return;
+        }
+
         _loading = true;
 
         var scheduleModel = new DoctorScheduleReqModel
             {
                 DoctorId = doctorId.Value,
-                ScheduleDate = scheduleDate.Value,
+                ScheduleDate = combinedDateTime,
                 MaxPatients = maxPatients.Value
             };
 

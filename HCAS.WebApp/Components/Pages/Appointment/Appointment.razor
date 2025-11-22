@@ -1,13 +1,15 @@
 ﻿@page "/Appointment"
 @inject AppointmentService _appointmentService
 @inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 @using Variant = MudBlazor.Variant
 @using HCAS.Domain.Features.Appointment
 
 <PageTitle>Appointment</PageTitle>
 
 <MudPaper Class="pa-4">
-    <MudText Typo="Typo.h5" Class="mb-4">Current Appointments</MudText>
+    <MudText Typo="Typo.h5" Class="mb-4">Appointments</MudText>
 
     <div class="d-flex align-items-center mb-2">
         <RadzenTextBox @bind-Value="@doctorName"
@@ -20,14 +22,6 @@
                        Style="width:200px;"
                        Change="OnPatientNameSearchChanged"/>
         <MudSpacer/>
-        @*<RadzenDropDown Data="@specializations"
-                        TextProperty="Name"
-                        ValueProperty="Id"
-                        @bind-Value="selectedSpecialization"
-                        Placeholder="Specialization"
-                        Style="width:200px; margin-left:10px;"
-                        Change="OnFilterChanged"/>*@
-
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
                    OnClick="NavigateToCreateAppointment"
@@ -46,43 +40,220 @@
         </MudButton>
     </div>
 
-    <MudTable Items="appointmentLst" Hover="true" Bordered="true">
-        <HeaderContent>
-            <MudTh>Sr No</MudTh>
-            <MudTh>Doctor Name</MudTh>
-            <MudTh>Patient Name</MudTh>
-            <MudTh>Appointment Date</MudTh>
-            <MudTh>Appointment Number</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Actions</MudTh>
-        </HeaderContent>
+    @if (isLoading)
+    {
+        <div class="d-flex justify-center pa-4">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </div>
+    }
+    else
+    {
+        <MudTabs ActivePanelIndex="selectedTabIndex" ActivePanelIndexChanged="OnTabChanged" Color="Color.Primary" SliderColor="Color.Primary">
+            <MudTabPanel Text="Current & Upcoming Appointments" Icon="@Icons.Material.Filled.Schedule">
+                @if (groupedAppointments != null && groupedAppointments.Any())
+                {
+                    @foreach (var group in groupedAppointments)
+                    {
+                        var groupParts = group.Key.Split('|');
+                        var groupDoctorName = groupParts[0];
+                        var groupDate = groupParts.Length > 2 ? groupParts[2] : "";
+                        var firstAppointment = group.First();
+                        var scheduleDate = DateTime.TryParse(groupDate, out var parsedDate) ? parsedDate : firstAppointment.AppointmentDate.Date;
+                        var appointmentCount = group.Count();
+                        
+                        <MudPaper Class="mb-4" Elevation="2">
+                            <MudExpansionPanels MultiExpansion="false" Class="mt-2">
+                                <MudExpansionPanel Text="@($"{groupDoctorName} - Schedule: {scheduleDate:MMM dd, yyyy} ({appointmentCount} appointment(s))")" 
+                                                   IsExpanded="true"
+                                                   Icon="@Icons.Material.Filled.Person">
+                                    <MudExpansionPanelText>
+                                        <MudTable Items="group" Hover="true" Bordered="true" Dense="true" Striped="true">
+                                            <HeaderContent>
+                                                <MudTh>Sr No</MudTh>
+                                                <MudTh>Patient Name</MudTh>
+                                                <MudTh>Appointment Time</MudTh>
+                                                <MudTh>Appointment Number</MudTh>
+                                                <MudTh>Status</MudTh>
+                                                <MudTh>Actions</MudTh>
+                                            </HeaderContent>
 
-        <RowTemplate>
-            <MudTd>@((page - 1) * pageSize + appointmentLst.IndexOf(context) + 1)</MudTd>
-            <MudTd>@context.DoctorName</MudTd>
-            <MudTd>@context.PatientName</MudTd>
-            <MudTd>@context.AppointmentDate.ToString("MMM dd, yyyy")</MudTd>
-            <MudTd>@context.AppointmentNumber</MudTd>
-            <MudTd DataLabel="Status">
-                <MudChip T="string"
-                         Variant="Variant.Outlined"
-                         Color="@GetStatusColor(context.Status)">
-                    @context.Status
-                </MudChip>
-            </MudTd>
-            <MudTd>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           OnClick="() => OpenEditDialog(context)">
-                    Edit
-                </MudButton>
-            </MudTd>
-        </RowTemplate>
-    </MudTable>
-    
-    <MudPagination Rectangular="true"
-                   Variant="MudBlazor.Variant.Outlined"
-                   SelectedChanged="PageChanged"
-                   Count="@(totalCount / pageSize + (totalCount % pageSize > 0 ? 1 : 0))"
-                   Class="pa-4"
-                   Selected="page"/>
+                                            <RowTemplate>
+                                                @{
+                                                    var appointment = context;
+                                                    var srNo = (page - 1) * pageSize + appointmentLst.IndexOf(appointment) + 1;
+                                                }
+                                                <MudTd DataLabel="Sr No">@srNo</MudTd>
+                                                <MudTd DataLabel="Patient Name">
+                                                    <MudText Typo="Typo.body2" Class="font-weight-medium">
+                                                        @appointment.PatientName
+                                                    </MudText>
+                                                </MudTd>
+                                                <MudTd DataLabel="Appointment Time">
+                                                    <div>
+                                                        <MudText Typo="Typo.body2" Class="font-weight-medium">
+                                                            @appointment.AppointmentDate.ToString("HH:mm") - @appointment.AppointmentDate.AddMinutes(20).ToString("HH:mm")
+                                                        </MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Info" Style="font-style: italic;">
+                                                            (20 min slot)
+                                                        </MudText>
+                                                    </div>
+                                                </MudTd>
+                                                <MudTd DataLabel="Appointment Number">
+                                                    <MudChip T="int" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">
+                                                        #@appointment.AppointmentNumber
+                                                    </MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Status">
+                                                    <MudChip T="string"
+                                                             Variant="Variant.Outlined"
+                                                             Color="@GetStatusColor(appointment.Status)">
+                                                        @appointment.Status
+                                                    </MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Actions">
+                                                    <MudButtonGroup Size="Size.Small">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                       Color="Color.Primary"
+                                                                       OnClick="() => OpenEditDialog(appointment)"
+                                                                       Title="Edit Appointment Status" />
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                       Color="Color.Error"
+                                                                       OnClick="() => DeleteAppointment(appointment)"
+                                                                       Title="Delete Appointment" />
+                                                    </MudButtonGroup>
+                                                </MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                    </MudExpansionPanelText>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        </MudPaper>
+                    }
+                    
+                    @if (totalCount > 0)
+                    {
+                        <div class="d-flex justify-space-between align-center mt-4">
+                            <MudText Typo="Typo.body2">
+                                Showing @((page - 1) * pageSize + 1) to @(Math.Min(page * pageSize, totalCount)) of @totalCount entries
+                            </MudText>
+                            <MudPagination Rectangular="true"
+                                           Variant="MudBlazor.Variant.Outlined"
+                                           SelectedChanged="PageChanged"
+                                           Count="@(totalCount / pageSize + (totalCount % pageSize > 0 ? 1 : 0))"
+                                           Selected="page" />
+                        </div>
+                    }
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No current or upcoming appointments found.
+                    </MudAlert>
+                }
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Past Appointments" Icon="@Icons.Material.Filled.History">
+                @if (groupedPastAppointments != null && groupedPastAppointments.Any())
+                {
+                    @foreach (var group in groupedPastAppointments)
+                    {
+                        var groupParts = group.Key.Split('|');
+                        var groupDoctorName = groupParts[0];
+                        var groupDate = groupParts.Length > 2 ? groupParts[2] : "";
+                        var firstAppointment = group.First();
+                        var scheduleDate = DateTime.TryParse(groupDate, out var parsedDate) ? parsedDate : firstAppointment.AppointmentDate.Date;
+                        var appointmentCount = group.Count();
+                        
+                        <MudPaper Class="mb-4" Elevation="2">
+                            <MudExpansionPanels MultiExpansion="false" Class="mt-2">
+                                <MudExpansionPanel Text="@($"{groupDoctorName} - Schedule: {scheduleDate:MMM dd, yyyy} ({appointmentCount} appointment(s))")" 
+                                                   IsExpanded="true"
+                                                   Icon="@Icons.Material.Filled.Person">
+                                    <MudExpansionPanelText>
+                                        <MudTable Items="group" Hover="true" Bordered="true" Dense="true" Striped="true">
+                                            <HeaderContent>
+                                                <MudTh>Sr No</MudTh>
+                                                <MudTh>Patient Name</MudTh>
+                                                <MudTh>Appointment Time</MudTh>
+                                                <MudTh>Appointment Number</MudTh>
+                                                <MudTh>Status</MudTh>
+                                                <MudTh>Actions</MudTh>
+                                            </HeaderContent>
+
+                                            <RowTemplate>
+                                                @{
+                                                    var appointment = context;
+                                                    var srNo = (pagePast - 1) * pageSize + pastAppointmentLst.IndexOf(appointment) + 1;
+                                                }
+                                                <MudTd DataLabel="Sr No">@srNo</MudTd>
+                                                <MudTd DataLabel="Patient Name">
+                                                    <MudText Typo="Typo.body2" Class="font-weight-medium">
+                                                        @appointment.PatientName
+                                                    </MudText>
+                                                </MudTd>
+                                                <MudTd DataLabel="Appointment Time">
+                                                    <div>
+                                                        <MudText Typo="Typo.body2" Class="font-weight-medium">
+                                                            @appointment.AppointmentDate.ToString("HH:mm") - @appointment.AppointmentDate.AddMinutes(20).ToString("HH:mm")
+                                                        </MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Info" Style="font-style: italic;">
+                                                            (20 min slot)
+                                                        </MudText>
+                                                    </div>
+                                                </MudTd>
+                                                <MudTd DataLabel="Appointment Number">
+                                                    <MudChip T="int" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">
+                                                        #@appointment.AppointmentNumber
+                                                    </MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Status">
+                                                    <MudChip T="string"
+                                                             Variant="Variant.Outlined"
+                                                             Color="@GetStatusColor(appointment.Status)">
+                                                        @appointment.Status
+                                                    </MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Actions">
+                                                    <MudButtonGroup Size="Size.Small">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                       Color="Color.Primary"
+                                                                       OnClick="() => OpenEditDialog(appointment)"
+                                                                       Title="Edit Appointment Status" />
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                                       Color="Color.Error"
+                                                                       OnClick="() => DeleteAppointment(appointment)"
+                                                                       Title="Delete Appointment" />
+                                                    </MudButtonGroup>
+                                                </MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                    </MudExpansionPanelText>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        </MudPaper>
+                    }
+                    
+                    @if (totalPastCount > 0)
+                    {
+                        <div class="d-flex justify-space-between align-center mt-4">
+                            <MudText Typo="Typo.body2">
+                                Showing @((pagePast - 1) * pageSize + 1) to @(Math.Min(pagePast * pageSize, totalPastCount)) of @totalPastCount entries
+                            </MudText>
+                            <MudPagination Rectangular="true"
+                                           Variant="MudBlazor.Variant.Outlined"
+                                           SelectedChanged="PastPageChanged"
+                                           Count="@(totalPastCount / pageSize + (totalPastCount % pageSize > 0 ? 1 : 0))"
+                                           Selected="pagePast" />
+                        </div>
+                    }
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No past appointments found.
+                    </MudAlert>
+                }
+            </MudTabPanel>
+        </MudTabs>
+    }
 </MudPaper>

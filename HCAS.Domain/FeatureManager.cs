@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+using MediatR;
 
 namespace HCAS.Domain
 {
@@ -24,7 +26,10 @@ namespace HCAS.Domain
 
             }, ServiceLifetime.Transient, ServiceLifetime.Transient);
 
-            // Register services
+            // Register MediatR - scan the current assembly for handlers
+            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+            // Register services (still needed for handlers that instantiate them)
             builder.Services.AddTransient<DapperService>();
             builder.Services.AddTransient<DoctorService>();
             builder.Services.AddTransient<SpecializationService>();

@@ -1,7 +1,8 @@
-﻿using HCAS.Domain.Features.Model.Staff;
-using HCAS.Domain.Features.Staff;
+﻿using HCAS.Domain.Features.Staff.Models;
+using HCAS.Domain.Features.Staff.Commands;
+using HCAS.Domain.Features.Staff.Queries;
 using HCAS.Shared;
-using Microsoft.AspNetCore.Http;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HCAS.Api.Controllers
@@ -10,24 +11,32 @@ namespace HCAS.Api.Controllers
     [ApiController]
     public class StaffController : ControllerBase
     {
-        private readonly StaffService _staffService;
-        public StaffController(StaffService staffService)
+        private readonly IMediator _mediator;
+        
+        public StaffController(IMediator mediator)
         {
-            _staffService = staffService;
+            _mediator = mediator;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetStaffListAsync(int page = 1, int pageSize = 10, string? search = null)
         {
-            var staffList = await _staffService.GetAllStaffAsync(page,pageSize,search);
+            var query = new GetAllStaffQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Search = search
+            };
+            
+            var result = await _mediator.Send(query);
       
-            if (!staffList.IsSuccess)
-                return BadRequest(staffList.Message);
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
 
             var pagedResult = new
             {
-                Items = staffList.Data,           // The staff list
-                TotalCount = staffList.Message // Total number of records
+                Items = result.Data?.Items,           // The staff list
+                TotalCount = result.Data?.TotalCount ?? 0 // Total number of records
             };
 
             return Ok(pagedResult);
@@ -36,22 +45,60 @@ namespace HCAS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> RegisterStaffAsync(StaffReqModel dto)
         {
-            var registerStaff = await _staffService.RegisterStaffAsync(dto);
-            return Ok(registerStaff.Data);
+            var command = new RegisterStaffCommand
+            {
+                Name = dto.Name,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Role = dto.Role,
+                Username = dto.Username,
+                Password = dto.Password
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateStaffAsync(StaffReqModel dto)
         {
-            var updateStaff = await _staffService.UpdateStaffAsync(dto);
-            return Ok(updateStaff.Data);
+            var command = new UpdateStaffCommand
+            {
+                Id = dto.Id,
+                Name = dto.Name,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Role = dto.Role,
+                Username = dto.Username,
+                Password = dto.Password
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeleteStaffAsync(int id)
         {
-            var deleteStaff = await _staffService.DeleteStaffAsync(id);
-            return Ok(deleteStaff.Data);
+            var command = new DeleteStaffCommand
+            {
+                Id = id
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
     }
 }

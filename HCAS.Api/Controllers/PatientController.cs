@@ -1,7 +1,7 @@
-﻿using System.Threading.Tasks;
-using HCAS.Domain.Features.Patient;
-using HCAS.Domain.Models.Patient;
-using Microsoft.AspNetCore.Http;
+﻿using HCAS.Domain.Features.Patient.Commands;
+using HCAS.Domain.Features.Patient.Queries;
+using HCAS.Domain.Features.Patient.Models;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HCAS.Api.Controllers
@@ -10,49 +10,84 @@ namespace HCAS.Api.Controllers
     [ApiController]
     public class PatientController : ControllerBase
     {
-        public readonly PatientService _patientService;
+        private readonly IMediator _mediator;
         
-        public PatientController(PatientService patientService)
+        public PatientController(IMediator mediator)
         {
-            _patientService = patientService;
+            _mediator = mediator;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetPatientList()
         {
-            var patientList = await _patientService.GetAllPatient();
-            return Ok(patientList.Data);
+            var query = new GetAllPatientsQuery();
+            var result = await _mediator.Send(query);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreatePatient([FromBody]PatientReqModel reqModel)
         {
-            var patient = await _patientService.RegisterPatient(reqModel);
-            return Ok(patient.Data);
+            var command = new RegisterPatientCommand
+            {
+                Name = reqModel.Name,
+                DateOfBirth = reqModel.DateOfBirth,
+                Gender = reqModel.Gender,
+                Phone = reqModel.Phone,
+                Email = reqModel.Email
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePatient(int id, [FromBody] PatientReqModel reqModel)
         {
-            var updPatient = await _patientService.UpdatePatient(reqModel,id);
+            var command = new UpdatePatientCommand
+            {
+                Id = id,
+                Name = reqModel.Name,
+                DateOfBirth = reqModel.DateOfBirth,
+                Gender = reqModel.Gender,
+                Phone = reqModel.Phone,
+                Email = reqModel.Email
+            };
+            
+            var result = await _mediator.Send(command);
 
-            if (updPatient.Data == null)
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound("Patient Not Found!");
             }
-            return Ok(updPatient.Data); 
-
+            
+            return Ok(result.Data); 
         }
 
         [HttpDelete]
         public async Task<IActionResult> DeletePatient(int id)
         {
-            var delPatient = await _patientService.DeletePatient(id);
-            if (delPatient.Data == null)
+            var command = new DeletePatientCommand
+            {
+                Id = id
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess || result.Data == null)
             {
                 return NotFound("Patient Not Found");
             }
-            return Ok(delPatient.Data);
+            
+            return Ok(result.Data);
         }
         
     }

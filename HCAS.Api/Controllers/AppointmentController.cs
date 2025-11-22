@@ -1,6 +1,6 @@
-﻿using HCAS.Database.AppDbContextModels;
-using HCAS.Domain.Features.Appointment;
-using Microsoft.AspNetCore.Http;
+﻿using HCAS.Domain.Features.Appointment.Commands;
+using HCAS.Domain.Features.Appointment.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HCAS.Api.Controllers
@@ -9,18 +9,23 @@ namespace HCAS.Api.Controllers
     [ApiController]
     public class AppointmentController : ControllerBase
     {
-        private readonly AppointmentService _appointment;
+        private readonly IMediator _mediator;
 
-        public AppointmentController(AppointmentService appointment)
+        public AppointmentController(IMediator mediator)
         {
-            _appointment = appointment;
+            _mediator = mediator;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllAppointmentList()
         {
-            var appointments = await _appointment.GetAllAppointments();
-            return Ok(appointments);
+            var query = new GetAllAppointmentsQuery();
+            var result = await _mediator.Send(query);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         //[HttpGet("{id}")]
@@ -33,15 +38,35 @@ namespace HCAS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateAppointment(int patientId, int scheduleId)
         {
-            var appointment = await _appointment.CreateAppointment(patientId, scheduleId);
-            return Ok(appointment);
+            var command = new CreateAppointmentCommand
+            {
+                PatientId = patientId,
+                ScheduleId = scheduleId
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
 
         [HttpPut]
         public async Task<IActionResult> UpdateAppointmentStatus(int appointmentId, string newStatus)
         {
-            var appointment = await _appointment.UpdateAppointment(appointmentId, newStatus);
-            return Ok(appointment);
+            var command = new UpdateAppointmentCommand
+            {
+                AppointmentId = appointmentId,
+                NewStatus = newStatus
+            };
+            
+            var result = await _mediator.Send(command);
+            
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+            
+            return Ok(result.Data);
         }
     }
 }

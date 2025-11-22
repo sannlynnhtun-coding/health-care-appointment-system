@@ -1,6 +1,6 @@
 ﻿using HCAS.Database.AppDbContextModels;
 using HCAS.Domain.Features.Doctors;
-using HCAS.Domain.Models.Appointment;
+using HCAS.Domain.Features.Appointment.Models;
 using HCAS.Shared;
 using Microsoft.EntityFrameworkCore;
 
@@ -87,14 +87,30 @@ public class AppointmentService
 
     public async Task<Result<PagedResult<AppointmentResponseModel>>> GetAppointmentsAsync(
         int page = 1, int pageSize = 10, 
-        string? doctorName = null, string? patientName = null)
+        string? doctorName = null, string? patientName = null,
+        bool includePastAppointments = false)
     {
         try
         {
+            var today = DateTime.Today;
             var query = _appDbContext.Appointments
                 .Include(a => a.Doctor)
                 .Include(a => a.Patient)
+                .Include(a => a.Schedule)
                 .AsQueryable();
+
+            // Filter by date: show only current date and future appointments by default
+            // If includePastAppointments is true, show only past appointments
+            if (includePastAppointments)
+            {
+                // Show only past appointments (before today)
+                query = query.Where(a => a.AppointmentDate.Date < today);
+            }
+            else
+            {
+                // Show only current date and future appointments (from today onwards)
+                query = query.Where(a => a.AppointmentDate.Date >= today);
+            }
 
             if (!string.IsNullOrWhiteSpace(doctorName))
             {
@@ -111,7 +127,11 @@ public class AppointmentService
             var total = await query.CountAsync();
 
             var appointments = await query
-                .OrderByDescending(a => a.Id)
+                .OrderBy(a => a.Doctor.Name)  // First order by doctor name (ascending)
+                .ThenBy(a => a.Schedule != null && a.Schedule.ScheduleDate.HasValue 
+                    ? a.Schedule.ScheduleDate.Value 
+                    : a.AppointmentDate.Date)  // Then by schedule date (ascending)
+                .ThenBy(a => a.AppointmentDate)  // Then by appointment date/time (ascending)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(a => new AppointmentResponseModel
@@ -160,6 +180,8 @@ public class AppointmentService
         }
     }
 
+    private const int AppointmentDurationMinutes = 20;
+
     public async Task<Result<AppointmentResModel>> CreateAppointment(int patientId, int scheduleId)
     {
         try
@@ -167,35 +189,59 @@ public class AppointmentService
             if (patientId <= 0)
                 return Result<AppointmentResModel>.ValidationError("Patient doesn't exist.");
 
-            /*var scheduleQuery = @"
-                SELECT Id, DoctorId, ScheduleDate, MaxPatients 
-                FROM DoctorSchedules 
-                WHERE Id = @ScheduleId AND del_flg = 0";*/
-
-            /*var schedule =
-                await _dapper.QueryFirstOrDefaultAsync<DoctorScheduleResModel>(scheduleQuery,
-                    new { ScheduleId = scheduleId });*/
-
             var schedule = await _appDbContext.DoctorSchedules
                 .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
-            if (schedule == null)
+            if (schedule == null || !schedule.ScheduleDate.HasValue)
                 return Result<AppointmentResModel>.ValidationError("Invalid schedule");
 
-            var appointmentCount = await _dapper.QueryFirstOrDefaultAsync<int>(AppointmentQuery.CountBySchedule,
-                new { ScheduleId = scheduleId });
+            // Get all existing appointments for this schedule (excluding cancelled)
+            var existingAppointments = await _appDbContext.Appointments
+                .Where(a => a.ScheduleId == scheduleId && a.Status != "Cancelled" && !a.DelFlg)
+                .OrderBy(a => a.AppointmentDate)
+                .ToListAsync();
 
-            if (appointmentCount >= schedule.MaxPatients)
+            // Check if schedule is full based on max patients
+            if (existingAppointments.Count >= schedule.MaxPatients)
                 return Result<AppointmentResModel>.ValidationError("This schedule is already full");
 
-            int appointmentNumber = appointmentCount + 1;
+            // Calculate the next available time slot (20 minutes apart)
+            DateTime scheduleStartTime = schedule.ScheduleDate.Value;
+            DateTime? nextAvailableTime = null;
+            
+            // If no existing appointments, use the schedule start time
+            if (!existingAppointments.Any())
+            {
+                nextAvailableTime = scheduleStartTime;
+            }
+            else
+            {
+                // Find the next available 20-minute slot after the last appointment
+                var lastAppointmentTime = existingAppointments.Last().AppointmentDate;
+                var nextSlot = lastAppointmentTime.AddMinutes(AppointmentDurationMinutes);
+                
+                // Ensure we don't exceed the schedule's maximum time capacity
+                // Assuming schedule duration based on MaxPatients * 20 minutes
+                var maxScheduleEndTime = scheduleStartTime.AddMinutes(schedule.MaxPatients.Value * AppointmentDurationMinutes);
+                
+                if (nextSlot > maxScheduleEndTime)
+                    return Result<AppointmentResModel>.ValidationError("No available time slots for this schedule");
+                
+                nextAvailableTime = nextSlot;
+            }
+
+            // Validate the calculated time is not in the past
+            if (nextAvailableTime.Value < DateTime.Now)
+                return Result<AppointmentResModel>.ValidationError("Calculated appointment time is in the past");
+
+            int appointmentNumber = existingAppointments.Count + 1;
 
             var parameters = new
             {
                 DoctorId = schedule.DoctorId,
                 PatientId = patientId,
                 ScheduleId = scheduleId,
-                AppointmentDate = schedule.ScheduleDate,
+                AppointmentDate = nextAvailableTime.Value,
                 AppointmentNumber = appointmentNumber,
                 Status = "Pending",
                 DelFlag = false
@@ -209,13 +255,13 @@ public class AppointmentService
                 DoctorId = schedule.DoctorId,
                 PatientId = patientId,
                 ScheduleId = scheduleId,
-                AppointmentDate = schedule.ScheduleDate,
+                AppointmentDate = nextAvailableTime.Value,
                 AppointmentNumber = appointmentNumber,
                 Status = "Pending",
                 DelFlg = false
             };
 
-            return Result<AppointmentResModel>.Success(result, "Appointment created successfully");
+            return Result<AppointmentResModel>.Success(result, $"Appointment created successfully for {nextAvailableTime.Value:HH:mm}");
         }
         catch (Exception ex)
         {
@@ -268,6 +314,47 @@ public class AppointmentService
         catch (Exception ex)
         {
             return Result<AppointmentResModel>.SystemError($"Error deleting appointment: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gets the next available appointment time for a schedule (20-minute slots)
+    /// </summary>
+    public async Task<DateTime?> GetNextAvailableAppointmentTime(int scheduleId)
+    {
+        try
+        {
+            var schedule = await _appDbContext.DoctorSchedules
+                .FirstOrDefaultAsync(s => s.Id == scheduleId);
+
+            if (schedule == null || !schedule.ScheduleDate.HasValue)
+                return null;
+
+            var existingAppointments = await _appDbContext.Appointments
+                .Where(a => a.ScheduleId == scheduleId && a.Status != "Cancelled" && !a.DelFlg)
+                .OrderBy(a => a.AppointmentDate)
+                .ToListAsync();
+
+            DateTime scheduleStartTime = schedule.ScheduleDate.Value;
+
+            if (!existingAppointments.Any())
+            {
+                return scheduleStartTime;
+            }
+
+            var lastAppointmentTime = existingAppointments.Last().AppointmentDate;
+            var nextSlot = lastAppointmentTime.AddMinutes(AppointmentDurationMinutes);
+
+            var maxScheduleEndTime = scheduleStartTime.AddMinutes(schedule.MaxPatients.Value * AppointmentDurationMinutes);
+
+            if (nextSlot > maxScheduleEndTime)
+                return null;
+
+            return nextSlot;
+        }
+        catch
+        {
+            return null;
         }
     }
 }

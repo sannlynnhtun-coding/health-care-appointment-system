@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.XPath;
-using HCAS.Domain.Models.Patient;
+using HCAS.Domain.Features.Patient.Models;
 using HCAS.Shared;
 
 namespace HCAS.Domain.Features.Patient;

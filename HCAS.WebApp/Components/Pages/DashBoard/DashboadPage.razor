@@ -1,110 +1,530 @@
-﻿@page "/Dashboard"
+﻿@page "/"
 @using HCAS.Domain.Features.Appointment
 @using HCAS.Domain.Features.Patient
+@using HCAS.Domain.Features.Doctors
+@using HCAS.Domain.Features.Staff
+@using HCAS.Domain.Features.Specializations
+@using HCAS.Domain.Features.DoctorSchedule
+@using HCAS.Domain.Features.Appointment.Models
 @inject IJSRuntime JS
 @inject AppointmentService AppointmentService
 @inject PatientService PatientService
+@inject DoctorService DoctorService
+@inject StaffService StaffService
+@inject SpecializationService SpecializationService
+@inject DoctorScheduleService DoctorScheduleService
 
-<MudPaper Class="p-6 rounded-xl shadow-md bg-grey-lighten-4">
-    <MudText Typo="Typo.h4" Class="mb-4 text-center text-primary font-weight-bold">
-        📊 Hospital Dashboard Overview
-    </MudText>
+<!-- Page Header -->
+    <MudPaper Elevation="4" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); border-radius: 50%;"></div>
+        <div style="position: relative; z-index: 1;">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center">
+                <MudStack>
+                    <MudText Typo="Typo.h4" Class="mb-2" Style="color: white; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="vertical-align: middle; margin-right: 12px; font-size: 32px;" />
+                        Hospital Dashboard Overview
+                    </MudText>
+                    <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.95); font-weight: 400; margin-left: 44px;">
+                        Comprehensive real-time insights and analytics for your healthcare management system
+                    </MudText>
+                </MudStack>
+                <MudButton Variant="MudBlazor.Variant.Text" Color="Color.Inherit" OnClick="@RefreshData" 
+                           Style="background: rgba(255,255,255,0.25); color: white; font-weight: 600; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; text-transform: none; padding: 8px 16px;">
+                    @{
+                        string refresh = $"animation: {(isRefreshing ? "spin 2s linear infinite" : "none")};";
+                    }
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" Class="mr-2" Style="@refresh" />
+                    @(isRefreshing ? "Refreshing..." : "Refresh Data")
+                </MudButton>
+            </MudStack>
+        </div>
+    </MudPaper>
 
-    <MudGrid Spacing="3">
-        <!-- Appointments Overview -->
+    <!-- Summary Cards Section -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: transparent;">
+        <MudText Typo="Typo.h5" Class="font-weight-bold" Style="color: #2d3748; font-size: 1.5rem;">
+            <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="vertical-align: middle; margin-right: 12px; color: #667eea; font-size: 28px;" />
+            Key Performance Metrics
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color: #718096; margin-left: 44px;">
+            Overview of your healthcare system's core statistics
+        </MudText>
+    </MudPaper>
+    
+    <MudGrid Spacing="4" Class="mb-10">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover" 
+                     Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Total Appointments</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.5rem;">@totalAppointments</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">All time</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Total Patients</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.5rem;">@totalPatients</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">Registered</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.MedicalServices" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Total Doctors</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.5rem;">@totalDoctors</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">Active</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Total Staff</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.5rem;">@totalStaff</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">On duty</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.ListAlt" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Specializations</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.5rem;">@totalSpecializations</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">Available</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Total Schedules</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.5rem;">@totalSchedules</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">Created</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(102, 126, 234, 0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Class="mb-3" Color="Color.Primary" Style="font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Primary" Style="font-weight: 600; letter-spacing: 0.5px;">Upcoming</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Color="Color.Primary" Style="font-size: 2.5rem;">@upcomingAppointments</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: 4px;">Next appointments</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255, 152, 0, 0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.Pending" Size="Size.Large" Class="mb-3" Color="Color.Warning" Style="font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Color="Color.Warning" Style="font-weight: 600; letter-spacing: 0.5px;">Pending</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Color="Color.Warning" Style="font-size: 2.5rem;">@pendingAppointments</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: 4px;">Awaiting approval</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Analytics Section -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4 mt-6" Style="background: transparent;">
+        <MudText Typo="Typo.h5" Class="font-weight-bold" Style="color: #2d3748; font-size: 1.5rem;">
+            <MudIcon Icon="@Icons.Material.Filled.Analytics" Style="vertical-align: middle; margin-right: 12px; color: #667eea; font-size: 28px;" />
+            Analytics & Visual Insights
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color: #718096; margin-left: 44px;">
+            Visual representations of your data trends and distributions
+        </MudText>
+    </MudPaper>
+    
+    <!-- Charts Row 1 -->
+    <MudGrid Spacing="4" Class="mb-6">
+        <!-- Appointments Over Time -->
         <MudItem xs="12" md="6">
-            <MudPaper Class="p-4 rounded-lg shadow-sm bg-white">
-                <MudText Typo="Typo.h6" Class="mb-3 text-primary">Appointments Over Time</MudText>
+            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center" Class="mb-4 pb-3" Style="border-bottom: 2px solid #f0f0f0;">
+                    <MudStack>
+                        <MudText Typo="Typo.h6" Style="color: #2d3748; font-weight: 700; font-size: 1.1rem;">
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Style="vertical-align: middle; margin-right: 10px; color: #667eea; font-size: 24px;" />
+                            Appointments Over Time
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #a0aec0; margin-left: 34px;">
+                            Daily appointment trends
+                        </MudText>
+                    </MudStack>
+                </MudStack>
                 @if (loadingAppointments)
                 {
-                    <div class="flex justify-center p-4">
-                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                    </div>
+                    <MudSkeleton Height="350px" Width="100%" Animation="MudBlazor.Animation.Wave" />
                 }
                 else if (!appointmentDates.Any())
                 {
-                    <div class="text-center p-4 text-secondary">No appointment data available.</div>
+                    <MudAlert Severity="Severity.Info" Variant="MudBlazor.Variant.Text" Class="mt-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" />
+                        No appointment data available at this time.
+                    </MudAlert>
                 }
                 else
                 {
-                    <div id="appointmentsChart" style="width:100%; height:350px;"></div>
+                    <div id="appointmentsChart" style="width:100%; height:380px; margin-top: 16px;"></div>
                 }
             </MudPaper>
         </MudItem>
 
-        <!-- Patients Overview -->
+        <!-- Patients by Gender -->
         <MudItem xs="12" md="6">
-            <MudPaper Class="p-4 rounded-lg shadow-sm bg-white">
-                <MudText Typo="Typo.h6" Class="mb-3 text-primary">Patients by Gender</MudText>
+            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center" Class="mb-4 pb-3" Style="border-bottom: 2px solid #f0f0f0;">
+                    <MudStack>
+                        <MudText Typo="Typo.h6" Style="color: #2d3748; font-weight: 700; font-size: 1.1rem;">
+                            <MudIcon Icon="@Icons.Material.Filled.PieChart" Style="vertical-align: middle; margin-right: 10px; color: #f093fb; font-size: 24px;" />
+                            Patients by Gender
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #a0aec0; margin-left: 34px;">
+                            Gender distribution
+                        </MudText>
+                    </MudStack>
+                </MudStack>
                 @if (loadingPatients)
                 {
-                    <div class="flex justify-center p-4">
-                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
-                    </div>
+                    <MudSkeleton Height="350px" Width="100%" Animation="MudBlazor.Animation.Wave" Style="border-radius: 50%;" />
                 }
                 else if (maleCount == 0 && femaleCount == 0)
                 {
-                    <div class="text-center p-4 text-secondary">No patient data available.</div>
+                    <MudAlert Severity="Severity.Info" Variant="MudBlazor.Variant.Text" Class="mt-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" />
+                        No patient data available at this time.
+                    </MudAlert>
                 }
                 else
                 {
-                    <div id="patientsChart" style="width:100%; height:350px;"></div>
+                    <div id="patientsChart" style="width:100%; height:380px; margin-top: 16px;"></div>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Charts Row 2 -->
+    <MudGrid Spacing="4" Class="mb-6">
+        <!-- Appointments by Status -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center" Class="mb-4 pb-3" Style="border-bottom: 2px solid #f0f0f0;">
+                    <MudStack>
+                        <MudText Typo="Typo.h6" Style="color: #2d3748; font-weight: 700; font-size: 1.1rem;">
+                            <MudIcon Icon="@Icons.Material.Filled.DonutLarge" Style="vertical-align: middle; margin-right: 10px; color: #4facfe; font-size: 24px;" />
+                            Appointments by Status
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #a0aec0; margin-left: 34px;">
+                            Status breakdown
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+                @if (loadingAppointments)
+                {
+                    <MudSkeleton Height="350px" Width="100%" Animation="MudBlazor.Animation.Wave" Style="border-radius: 50%;" />
+                }
+                else if (pendingCount == 0 && completedCount == 0 && cancelledCount == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="MudBlazor.Variant.Text" Class="mt-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" />
+                        No appointment status data available at this time.
+                    </MudAlert>
+                }
+                else
+                {
+                    <div id="statusChart" style="width:100%; height:380px; margin-top: 16px;"></div>
                 }
             </MudPaper>
         </MudItem>
 
-        <!-- Summary Cards -->
-        <MudItem xs="12">
-            <MudGrid Spacing="3">
-                <MudItem xs="12" sm="4">
-                    <MudCard Class="p-4 text-center shadow-sm hover:shadow-md transition">
-                        <MudText Typo="Typo.h6" Color="Color.Primary">Total Appointments</MudText>
-                        <MudText Typo="Typo.h5" Class="font-weight-bold mt-2">@totalAppointments</MudText>
-                    </MudCard>
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudCard Class="p-4 text-center shadow-sm hover:shadow-md transition">
-                        <MudText Typo="Typo.h6" Color="Color.Primary">Total Patients</MudText>
-                        <MudText Typo="Typo.h5" Class="font-weight-bold mt-2">@totalPatients</MudText>
-                    </MudCard>
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudCard Class="p-4 text-center shadow-sm hover:shadow-md transition">
-                        <MudText Typo="Typo.h6" Color="Color.Primary">Female to Male Ratio</MudText>
-                        <MudText Typo="Typo.h5" Class="font-weight-bold mt-2">
-                            @(femaleCount):@(maleCount)
+        <!-- Doctors by Specialization -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center" Class="mb-4 pb-3" Style="border-bottom: 2px solid #f0f0f0;">
+                    <MudStack>
+                        <MudText Typo="Typo.h6" Style="color: #2d3748; font-weight: 700; font-size: 1.1rem;">
+                            <MudIcon Icon="@Icons.Material.Filled.Medication" Style="vertical-align: middle; margin-right: 10px; color: #43e97b; font-size: 24px;" />
+                            Doctors by Specialization
                         </MudText>
-                    </MudCard>
-                </MudItem>
-            </MudGrid>
+                        <MudText Typo="Typo.caption" Style="color: #a0aec0; margin-left: 34px;">
+                            Medical fields distribution
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+                @if (loadingDoctors)
+                {
+                    <MudSkeleton Height="350px" Width="100%" Animation="MudBlazor.Animation.Wave" Style="border-radius: 50%;" />
+                }
+                else if (!specializationCounts.Any() || !specializationCounts.Any(s => s > 0))
+                {
+                    <MudAlert Severity="Severity.Info" Variant="MudBlazor.Variant.Text" Class="mt-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" />
+                        No doctor specialization data available at this time.
+                    </MudAlert>
+                }
+                else
+                {
+                    <div id="specializationChart" style="width:100%; height:380px; margin-top: 16px;"></div>
+                }
+            </MudPaper>
         </MudItem>
     </MudGrid>
-</MudPaper>
+
+    <!-- Charts Row 3 -->
+    <MudGrid Spacing="4" Class="mb-6">
+        <!-- Appointments by Doctor -->
+        <MudItem xs="12">
+            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center" Class="mb-4 pb-3" Style="border-bottom: 2px solid #f0f0f0;">
+                    <MudStack>
+                        <MudText Typo="Typo.h6" Style="color: #2d3748; font-weight: 700; font-size: 1.1rem;">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Style="vertical-align: middle; margin-right: 10px; color: #fa709a; font-size: 24px;" />
+                            Top Doctors by Appointment Count
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #a0aec0; margin-left: 34px;">
+                            Most booked healthcare professionals
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+                @if (loadingAppointments)
+                {
+                    <MudSkeleton Height="420px" Width="100%" Animation="MudBlazor.Animation.Wave" />
+                }
+                else if (!doctorAppointmentCounts.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Variant="MudBlazor.Variant.Text" Class="mt-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" />
+                        No appointment by doctor data available at this time.
+                    </MudAlert>
+                }
+                else
+                {
+                    <div id="doctorChart" style="width:100%; height:420px; margin-top: 16px;"></div>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Upcoming Appointments Table -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4 mt-6" Style="background: transparent;">
+        <MudText Typo="Typo.h5" Class="font-weight-bold" Style="color: #2d3748; font-size: 1.5rem;">
+            <MudIcon Icon="@Icons.Material.Filled.Event" Style="vertical-align: middle; margin-right: 12px; color: #667eea; font-size: 28px;" />
+            Upcoming Appointments
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color: #718096; margin-left: 44px;">
+            Next scheduled patient appointments requiring attention
+        </MudText>
+    </MudPaper>
+    
+    <MudPaper Elevation="3" Class="pa-6 mb-8" Style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05);">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="MudBlazor.AlignItems.Center" Class="mb-4 pb-3" Style="border-bottom: 2px solid #f0f0f0;">
+            <MudStack>
+                <MudText Typo="Typo.h6" Style="color: #2d3748; font-weight: 700; font-size: 1.1rem;">
+                    Next 10 Appointments
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color: #a0aec0;">
+                    Recently scheduled appointments
+                </MudText>
+            </MudStack>
+            <MudChip T="string" Size="Size.Medium" Color="Color.Primary" Variant="MudBlazor.Variant.Filled" Style="font-weight: 600;">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-2" />
+                @upcomingAppointmentsList.Count Upcoming
+            </MudChip>
+        </MudStack>
+        
+        @if (loadingAppointments)
+        {
+            <MudStack Spacing="3">
+                @for (var i = 0; i < 5; i++)
+                {
+                    <MudSkeleton Height="40px" Width="100%" Animation="MudBlazor.Animation.Wave" />
+                }
+            </MudStack>
+        }
+        else if (!upcomingAppointmentsList.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="MudBlazor.Variant.Filled" Class="mt-4">
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" />
+                <MudText Typo="Typo.body1" Class="ml-3">No upcoming appointments scheduled at this time.</MudText>
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable T="AppointmentResModel" Items="upcomingAppointmentsList" Hover="true" Dense="false" Striped="true" Elevation="0" Style="border-radius: 8px; overflow: hidden;">
+                <HeaderContent>
+                    <MudTh>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Appointment #</MudText>
+                    </MudTh>
+                    <MudTh>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Patient</MudText>
+                    </MudTh>
+                    <MudTh>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Doctor</MudText>
+                    </MudTh>
+                    <MudTh>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Date & Time</MudText>
+                    </MudTh>
+                    <MudTh>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Status</MudText>
+                    </MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                            #@context.AppointmentNumber
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudStack Row="true" AlignItems="MudBlazor.AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.body2">@(context.PatientName ?? "N/A")</MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd>
+                        <MudStack Row="true" AlignItems="MudBlazor.AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.MedicalServices" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText Typo="Typo.body2">@(context.DoctorName ?? "N/A")</MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd>
+                        <MudStack Row="true" AlignItems="MudBlazor.AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Color="Color.Tertiary" />
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                @(context.AppointmentDate?.ToString("MMM dd, yyyy") ?? "N/A")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @(context.AppointmentDate?.ToString("HH:mm") ?? "")
+                            </MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Medium" 
+                                 Color="@GetStatusColor(context.Status ?? "Pending")"
+                                 Variant="MudBlazor.Variant.Filled"
+                                 Icon="@GetStatusIcon(context.Status ?? "Pending")">
+                            @(context.Status ?? "Pending")
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
 
 @code {
+    // Chart data
     private List<int> appointmentCounts = new();
     private List<string> appointmentDates = new();
+    private List<string> doctorNames = new();
+    private List<int> doctorAppointmentCounts = new();
+    private List<string> specializationNames = new();
+    private List<int> specializationCounts = new();
 
+    // Patient data
     private int maleCount = 0;
     private int femaleCount = 0;
+    
+    // Status counts
+    private int pendingCount = 0;
+    private int completedCount = 0;
+    private int cancelledCount = 0;
+    
+    // Summary totals
     private int totalAppointments = 0;
     private int totalPatients = 0;
+    private int totalDoctors = 0;
+    private int totalStaff = 0;
+    private int totalSpecializations = 0;
+    private int totalSchedules = 0;
+    private int upcomingAppointments = 0;
+    private int pendingAppointments = 0;
 
+    // Loading states
     private bool loadingAppointments = true;
     private bool loadingPatients = true;
+    private bool loadingDoctors = true;
+    private bool loadingStaff = true;
+    private bool loadingSpecializations = true;
+    private bool loadingSchedules = true;
+
+    // Upcoming appointments list
+    private List<AppointmentResModel> upcomingAppointmentsList = new();
+    private bool chartsRendered = false;
+    private bool isRefreshing = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAppointmentData();
-        await LoadPatientData();
+        await LoadAllData();
+    }
+
+    private async Task RefreshData()
+    {
+        isRefreshing = true;
+        chartsRendered = false;
+        StateHasChanged();
+        
+        await Task.Delay(500); // Visual feedback
+        await LoadAllData();
+        
+        isRefreshing = false;
+        StateHasChanged();
+        
+        if (!chartsRendered)
+        {
+            await Task.Delay(500);
+            await RenderCharts();
+            chartsRendered = true;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !loadingAppointments && !loadingPatients)
+        // Check if all data is loaded and charts haven't been rendered yet
+        if (!chartsRendered && !loadingAppointments && !loadingPatients && !loadingDoctors && !loadingSpecializations)
         {
+            await Task.Delay(500); // Small delay to ensure DOM is ready
             await RenderCharts();
+            chartsRendered = true;
         }
+    }
+
+    private async Task LoadAllData()
+    {
+        var tasks = new List<Task>
+        {
+            LoadAppointmentData(),
+            LoadPatientData(),
+            LoadDoctorData(),
+            LoadStaffData(),
+            LoadSpecializationData(),
+            LoadScheduleData()
+        };
+
+        await Task.WhenAll(tasks);
     }
 
     private async Task LoadAppointmentData()
@@ -122,6 +542,7 @@
 
                 totalAppointments = appointments.Count;
 
+                // Appointments over time
                 appointmentDates = appointments
                     .Select(a => a.AppointmentDate!.Value.ToString("MMM dd"))
                     .Distinct()
@@ -130,6 +551,36 @@
                 appointmentCounts = appointmentDates
                     .Select(date => appointments.Count(a => a.AppointmentDate!.Value.ToString("MMM dd") == date))
                     .ToList();
+
+                // Appointments by status
+                pendingCount = appointments.Count(a => a.Status?.Equals("Pending", StringComparison.OrdinalIgnoreCase) == true);
+                completedCount = appointments.Count(a => a.Status?.Equals("Complete", StringComparison.OrdinalIgnoreCase) == true);
+                cancelledCount = appointments.Count(a => a.Status?.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) == true);
+                pendingAppointments = pendingCount;
+
+                // Appointments by doctor
+                var doctorGroups = appointments
+                    .Where(a => !string.IsNullOrEmpty(a.DoctorName))
+                    .GroupBy(a => a.DoctorName ?? "Unknown")
+                    .OrderByDescending(g => g.Count())
+                    .Take(10)
+                    .ToList();
+
+                doctorNames = doctorGroups.Select(g => g.Key).ToList();
+                doctorAppointmentCounts = doctorGroups.Select(g => g.Count()).ToList();
+
+                // Upcoming appointments (next 10)
+                var today = DateTime.Today;
+                upcomingAppointmentsList = appointments
+                    .Where(a => a.AppointmentDate.HasValue && a.AppointmentDate.Value >= DateTime.Now && 
+                                a.Status?.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) != true)
+                    .OrderBy(a => a.AppointmentDate)
+                    .Take(10)
+                    .ToList();
+
+                upcomingAppointments = appointments
+                    .Count(a => a.AppointmentDate.HasValue && a.AppointmentDate.Value >= DateTime.Now &&
+                                a.Status?.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) != true);
             }
         }
         catch (Exception ex)
@@ -167,57 +618,433 @@
         }
     }
 
+    private async Task LoadDoctorData()
+    {
+        try
+        {
+            var result = await DoctorService.GetDoctorsAsync(page: 1, pageSize: 1000);
+
+            if (result.IsSuccess && result.Data is not null)
+            {
+                totalDoctors = result.Data.TotalCount;
+                
+                // Load all doctors to count by specialization
+                var allDoctors = result.Data.Items.ToList();
+                
+                // We need to get specialization names - this will be handled in a separate call
+                // For now, we'll just get the count
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading doctors: {ex.Message}");
+        }
+        finally
+        {
+            loadingDoctors = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadStaffData()
+    {
+        try
+        {
+            var result = await StaffService.GetAllStaffAsync(page: 1, pageSize: 1000);
+
+            if (result.IsSuccess && result.Data is not null)
+            {
+                totalStaff = result.Data.TotalCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading staff: {ex.Message}");
+        }
+        finally
+        {
+            loadingStaff = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadSpecializationData()
+    {
+        try
+        {
+            var specResult = await SpecializationService.GetSpecializationAsync(page: 1, pageSize: 1000);
+
+            if (specResult.IsSuccess && specResult.Data is not null)
+            {
+                totalSpecializations = specResult.Data.TotalCount;
+                
+                // Get all doctors to count by specialization
+                var doctorResult = await DoctorService.GetDoctorsAsync(page: 1, pageSize: 1000);
+                
+                if (doctorResult.IsSuccess && doctorResult.Data is not null)
+                {
+                    var specializations = specResult.Data.Items.ToList();
+                    var doctors = doctorResult.Data.Items.ToList();
+                    
+                    // Count doctors by specialization
+                    var specGroups = specializations
+                        .Select(spec => new
+                        {
+                            Name = spec.Name,
+                            Count = doctors.Count(d => d.SpecializationId == spec.Id)
+                        })
+                        .Where(s => s.Count > 0) // Only show specializations with doctors
+                        .OrderByDescending(s => s.Count)
+                        .ToList();
+
+                    specializationNames = specGroups.Select(s => s.Name).ToList();
+                    specializationCounts = specGroups.Select(s => s.Count).ToList();
+                }
+                else
+                {
+                    // If no doctors, just show specializations with 0 count
+                    var specializations = specResult.Data.Items.ToList();
+                    specializationNames = specializations.Select(s => s.Name).ToList();
+                    specializationCounts = specializations.Select(s => 0).ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading specializations: {ex.Message}");
+        }
+        finally
+        {
+            loadingSpecializations = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadScheduleData()
+    {
+        try
+        {
+            var result = await DoctorScheduleService.GetAllSchedules();
+
+            if (result.IsSuccess && result.Data is not null)
+            {
+                totalSchedules = result.Data.Count();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading schedules: {ex.Message}");
+        }
+        finally
+        {
+            loadingSchedules = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task RenderCharts()
     {
+        // Appointments Over Time Chart
         if (appointmentDates.Any())
         {
             await JS.InvokeVoidAsync("Highcharts.chart", "appointmentsChart", new
             {
-                chart = new { type = "line", backgroundColor = "#ffffff" },
-                title = new { text = "Appointments Over Time" },
-                xAxis = new { categories = appointmentDates },
-                yAxis = new { title = new { text = "Appointments" } },
-                series = new[] { new { name = "Appointments", data = appointmentCounts } },
-                colors = new[] { "#1976d2" },
-                tooltip = new { shared = true, valueSuffix = " appointments" },
-                legend = new { enabled = false }
+                chart = new { type = "line", backgroundColor = "transparent", style = new { fontFamily = "'Roboto', sans-serif" } },
+                title = new { text = (string)null },
+                xAxis = new { 
+                    categories = appointmentDates,
+                    labels = new { style = new { fontSize = "12px", color = "#718096" } },
+                    lineColor = "#e2e8f0",
+                    gridLineColor = "#f7fafc"
+                },
+                yAxis = new { 
+                    title = new { text = "Number of Appointments", style = new { fontSize = "13px", fontWeight = "600", color = "#4a5568" } },
+                    labels = new { style = new { fontSize = "12px", color = "#718096" } },
+                    gridLineColor = "#f7fafc",
+                    lineColor = "#e2e8f0"
+                },
+                series = new[] { new { 
+                    name = "Appointments", 
+                    data = appointmentCounts,
+                    color = "#667eea",
+                    lineWidth = 3,
+                    marker = new { radius = 5, fillColor = "#ffffff", lineWidth = 2, lineColor = "#667eea" },
+                    shadow = new { color = "rgba(102, 126, 234, 0.3)", offsetX = 0, offsetY = 2, opacity = 0.4, width = 8 }
+                } },
+                colors = new[] { "#667eea" },
+                tooltip = new { 
+                    backgroundColor = "rgba(255, 255, 255, 0.95)",
+                    borderColor = "#e2e8f0",
+                    borderRadius = 8,
+                    shadow = true,
+                    style = new { fontSize = "13px", fontWeight = "500" },
+                    shared = true, 
+                    valueSuffix = " appointments" 
+                },
+                legend = new { enabled = false },
+                plotOptions = new {
+                    line = new {
+                        dataLabels = new { enabled = false },
+                        enableMouseTracking = true
+                    }
+                }
             });
         }
 
+        // Patients by Gender Chart
         if (maleCount > 0 || femaleCount > 0)
         {
             await JS.InvokeVoidAsync("Highcharts.chart", "patientsChart", new
             {
-                chart = new { type = "pie", backgroundColor = "#ffffff" },
-                title = new { text = "Patients by Gender" },
+                chart = new { type = "pie", backgroundColor = "transparent", style = new { fontFamily = "'Roboto', sans-serif" } },
+                title = new { text = (string)null },
                 series = new[]
                 {
                     new
                     {
                         name = "Patients",
                         colorByPoint = true,
+                        size = "85%",
+                        innerSize = "50%",
                         data = new[]
                         {
-                            new { name = "Male", y = maleCount, color = "#42a5f5" },
-                            new { name = "Female", y = femaleCount, color = "#f06292" }
+                            new { name = "Male", y = maleCount, color = "#42a5f5", sliced = false, selected = false },
+                            new { name = "Female", y = femaleCount, color = "#f06292", sliced = false, selected = false }
+                        },
+                        dataLabels = new
+                        {
+                            enabled = true,
+                            format = "<b>{point.name}</b><br/>{point.y} ({point.percentage:.1f}%)",
+                            style = new { fontSize = "13px", fontWeight = "600", color = "#2d3748" },
+                            distance = -40
                         }
                     }
                 },
-                tooltip = new { pointFormat = "{series.name}: <b>{point.y}</b>" },
+                tooltip = new { 
+                    backgroundColor = "rgba(255, 255, 255, 0.95)",
+                    borderColor = "#e2e8f0",
+                    borderRadius = 8,
+                    shadow = true,
+                    pointFormat = "<b>{point.name}</b>: {point.y} ({point.percentage:.1f}%)" 
+                },
                 plotOptions = new
                 {
                     pie = new
                     {
                         allowPointSelect = true,
                         cursor = "pointer",
+                        borderWidth = 3,
+                        borderColor = "#ffffff",
+                        shadow = new { color = "rgba(0, 0, 0, 0.1)", offsetX = 0, offsetY = 2, opacity = 0.3, width = 6 },
+                        states = new {
+                            hover = new { 
+                                brightness = 0.05,
+                                halo = new { size = 10, opacity = 0.5 }
+                            }
+                        }
+                    }
+                },
+                credits = new { enabled = false }
+            });
+        }
+
+        // Appointments by Status Chart
+        if (pendingCount > 0 || completedCount > 0 || cancelledCount > 0)
+        {
+            await JS.InvokeVoidAsync("Highcharts.chart", "statusChart", new
+            {
+                chart = new { type = "pie", backgroundColor = "transparent", style = new { fontFamily = "'Roboto', sans-serif" } },
+                title = new { text = (string)null },
+                series = new[]
+                {
+                    new
+                    {
+                        name = "Appointments",
+                        colorByPoint = true,
+                        size = "85%",
+                        data = new[]
+                        {
+                            new { name = "Pending", y = pendingCount, color = "#ff9800" },
+                            new { name = "Completed", y = completedCount, color = "#4caf50" },
+                            new { name = "Cancelled", y = cancelledCount, color = "#f44336" }
+                        },
                         dataLabels = new
                         {
                             enabled = true,
-                            format = "<b>{point.name}</b>: {point.y}"
+                            format = "<b>{point.name}</b><br/>{point.y} ({point.percentage:.1f}%)",
+                            style = new { fontSize = "13px", fontWeight = "600", color = "#2d3748" },
+                            distance = -30
                         }
                     }
-                }
+                },
+                tooltip = new { 
+                    backgroundColor = "rgba(255, 255, 255, 0.95)",
+                    borderColor = "#e2e8f0",
+                    borderRadius = 8,
+                    shadow = true,
+                    pointFormat = "<b>{point.name}</b>: {point.y} ({point.percentage:.1f}%)" 
+                },
+                plotOptions = new
+                {
+                    pie = new
+                    {
+                        allowPointSelect = true,
+                        cursor = "pointer",
+                        borderWidth = 3,
+                        borderColor = "#ffffff",
+                        shadow = new { color = "rgba(0, 0, 0, 0.1)", offsetX = 0, offsetY = 2, opacity = 0.3, width = 6 },
+                        states = new {
+                            hover = new { 
+                                brightness = 0.05,
+                                halo = new { size = 10, opacity = 0.5 }
+                            }
+                        }
+                    }
+                },
+                credits = new { enabled = false }
             });
         }
+
+        // Doctors by Specialization Chart
+        if (specializationNames.Any() && specializationCounts.Any(s => s > 0))
+        {
+            var specData = specializationNames.Zip(specializationCounts, (name, count) => new { name, y = count })
+                .Where(d => d.y > 0)
+                .Select(d => new { d.name, d.y })
+                .ToArray();
+                
+            await JS.InvokeVoidAsync("Highcharts.chart", "specializationChart", new
+            {
+                chart = new { type = "pie", backgroundColor = "transparent", style = new { fontFamily = "'Roboto', sans-serif" } },
+                title = new { text = (string)null },
+                series = new[]
+                {
+                    new
+                    {
+                        name = "Doctors",
+                        colorByPoint = true,
+                        size = "85%",
+                        data = specData,
+                        dataLabels = new
+                        {
+                            enabled = true,
+                            format = "<b>{point.name}</b><br/>{point.y} doctors",
+                            style = new { fontSize = "12px", fontWeight = "600", color = "#2d3748" },
+                            distance = -25
+                        }
+                    }
+                },
+                tooltip = new { 
+                    backgroundColor = "rgba(255, 255, 255, 0.95)",
+                    borderColor = "#e2e8f0",
+                    borderRadius = 8,
+                    shadow = true,
+                    pointFormat = "<b>{point.name}</b>: {point.y} doctors ({point.percentage:.1f}%)" 
+                },
+                plotOptions = new
+                {
+                    pie = new
+                    {
+                        allowPointSelect = true,
+                        cursor = "pointer",
+                        borderWidth = 3,
+                        borderColor = "#ffffff",
+                        shadow = new { color = "rgba(0, 0, 0, 0.1)", offsetX = 0, offsetY = 2, opacity = 0.3, width = 6 },
+                        states = new {
+                            hover = new { 
+                                brightness = 0.05,
+                                halo = new { size = 10, opacity = 0.5 }
+                            }
+                        }
+                    }
+                },
+                credits = new { enabled = false }
+            });
+        }
+
+        // Appointments by Doctor Chart
+        if (doctorNames.Any())
+        {
+            await JS.InvokeVoidAsync("Highcharts.chart", "doctorChart", new
+            {
+                chart = new { type = "column", backgroundColor = "transparent", style = new { fontFamily = "'Roboto', sans-serif" } },
+                title = new { text = (string)null },
+                xAxis = new { 
+                    categories = doctorNames, 
+                    title = new { text = "Doctors", style = new { fontSize = "13px", fontWeight = "600", color = "#4a5568" } },
+                    labels = new { style = new { fontSize = "11px", color = "#718096", fontWeight = "500" }, rotation = -45 },
+                    lineColor = "#e2e8f0",
+                    gridLineColor = "#f7fafc"
+                },
+                yAxis = new { 
+                    title = new { text = "Number of Appointments", style = new { fontSize = "13px", fontWeight = "600", color = "#4a5568" } },
+                    labels = new { style = new { fontSize = "12px", color = "#718096" } },
+                    gridLineColor = "#f7fafc",
+                    lineColor = "#e2e8f0"
+                },
+                series = new[] { new { 
+                    name = "Appointments", 
+                    data = doctorAppointmentCounts,
+                    color = "#667eea",
+                    borderRadius = 8,
+                    borderWidth = 0,
+                    shadow = new { color = "rgba(102, 126, 234, 0.3)", offsetX = 0, offsetY = 2, opacity = 0.4, width = 6 },
+                    dataLabels = new {
+                        enabled = true,
+                        format = "{y}",
+                        style = new { fontSize = "12px", fontWeight = "600", color = "#2d3748" }
+                    }
+                } },
+                colors = new[] { "#667eea" },
+                tooltip = new { 
+                    backgroundColor = "rgba(255, 255, 255, 0.95)",
+                    borderColor = "#e2e8f0",
+                    borderRadius = 8,
+                    shadow = true,
+                    style = new { fontSize = "13px", fontWeight = "500" },
+                    valueSuffix = " appointments",
+                    headerFormat = "<b>{point.x}</b><br/>"
+                },
+                legend = new { enabled = false },
+                plotOptions = new {
+                    column = new {
+                        pointPadding = 0.2,
+                        borderWidth = 0,
+                        groupPadding = 0.1,
+                        states = new {
+                            hover = new {
+                                brightness = -0.05,
+                                shadow = new { enabled = true }
+                            }
+                        }
+                    }
+                },
+                credits = new { enabled = false }
+            });
+        }
+    }
+
+    private MudBlazor.Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Pending" => MudBlazor.Color.Warning,
+            "Complete" => MudBlazor.Color.Success,
+            "Completed" => MudBlazor.Color.Success,
+            "Cancelled" => MudBlazor.Color.Error,
+            _ => MudBlazor.Color.Default
+        };
+    }
+
+    private string GetStatusIcon(string status)
+    {
+        return status switch
+        {
+            "Pending" => Icons.Material.Filled.Pending,
+            "Complete" => Icons.Material.Filled.CheckCircle,
+            "Completed" => Icons.Material.Filled.CheckCircle,
+            "Cancelled" => Icons.Material.Filled.Cancel,
+            _ => Icons.Material.Filled.Info
+        };
     }
 }

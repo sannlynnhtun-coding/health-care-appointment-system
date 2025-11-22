@@ -40,7 +40,7 @@
                 <MudTh>Actions</MudTh>
                 <MudTh>No.</MudTh>
                 <MudTh>Doctor Name</MudTh>
-                <MudTh>Schedule Date</MudTh>
+                <MudTh>Schedule Date & Time</MudTh>
                 <MudTh>Max Patients</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -58,7 +58,24 @@
                 </MudTd>
                 <MudTd DataLabel="No.">@((page - 1) * pageSize + pageSchedules.IndexOf(context) + 1)</MudTd>
                 <MudTd DataLabel="Doctor Name">@GetDoctorName(context.DoctorId)</MudTd>
-                <MudTd DataLabel="Schedule Date">@context.ScheduleDate.ToString("yyyy-MM-dd")</MudTd>
+                <MudTd DataLabel="Schedule Date & Time">
+                    @if (context.ScheduleDate.HasValue)
+                    {
+                        <div>
+                            <MudText Typo="Typo.body2" Class="font-weight-medium">
+                                @context.ScheduleDate.Value.ToString("MMM dd, yyyy")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" />
+                                @context.ScheduleDate.Value.ToString("HH:mm")
+                            </MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Error">N/A</MudText>
+                    }
+                </MudTd>
                 <MudTd DataLabel="Max Patients">@context.MaxPatients</MudTd>
             </RowTemplate>
             <NoRecordsContent>

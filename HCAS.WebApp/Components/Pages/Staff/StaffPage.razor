@@ -4,7 +4,7 @@
 @inject InjectService InjectService
 
 @using HCAS.Domain.Features.Staff
-@using HCAS.Domain.Features.Model.Staff
+@using HCAS.Domain.Features.Staff.Models
 @using MudBlazor
 @using Variant = MudBlazor.Variant
 @using HCAS.WebApp.Components.Common
@@ -67,12 +67,19 @@
         </RowTemplate>
     </MudTable>
 
-    <MudPagination Rectangular="true"
-                   Variant="Variant.Outlined"
-                   SelectedChanged="PageChanged"
-                   Count="@(totalCount / pageSize + (totalCount % pageSize > 0 ? 1 : 0))"
-                   Selected="page"
-                   Class="pa-4" />
+    @if (totalCount > 0)
+    {
+        <div class="d-flex justify-space-between align-center mt-4">
+            <MudText Typo="Typo.body2">
+                Showing @((page - 1) * pageSize + 1) to @(Math.Min(page * pageSize, totalCount)) of @totalCount entries
+            </MudText>
+            <MudPagination Rectangular="true"
+                           Variant="MudBlazor.Variant.Outlined"
+                           SelectedChanged="PageChanged"
+                           Count="@(totalCount / pageSize + (totalCount % pageSize > 0 ? 1 : 0))"
+                           Selected="page" />
+        </div>
+    }
 </MudPaper>
 
 @code {

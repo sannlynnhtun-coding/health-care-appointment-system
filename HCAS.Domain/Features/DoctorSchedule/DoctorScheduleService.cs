@@ -1,4 +1,4 @@
-﻿using HCAS.Domain.Models.DoctorSchedule;
+﻿using HCAS.Domain.Features.DoctorSchedule.Models;
 using HCAS.Shared;
 using System;
 using System.Collections.Generic;
@@ -28,7 +28,7 @@ public class DoctorScheduleResModel
 
     public int DoctorId { get; set; }
 
-    public DateTime ScheduleDate { get; set; }
+    public DateTime? ScheduleDate { get; set; }
 
     public int MaxPatients { get; set; }
 
@@ -297,7 +297,9 @@ public class DoctorScheduleService
             var query = _appDbContext.DoctorSchedules
                 .Include(ds => ds.Doctor)
                 .ThenInclude(d => d.Specialization)
-                .Where(ds => ds.ScheduleDate > DateTime.Now)
+                .Where(ds => (ds.DelFlg == null || ds.DelFlg == false) 
+                             && ds.ScheduleDate.HasValue 
+                             && ds.ScheduleDate.Value.Date >= DateTime.Today)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(doctorName))

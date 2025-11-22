@@ -1,7 +1,8 @@
 ﻿using HCAS.Domain.Features.DoctorSchedule;
-using HCAS.Domain.Models.DoctorSchedule;
+using HCAS.Domain.Features.DoctorSchedule.Commands;
+using HCAS.Domain.Features.DoctorSchedule.Queries;
 using HCAS.Shared;
-using Microsoft.AspNetCore.Http;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HCAS.Api.Controllers
@@ -10,25 +11,40 @@ namespace HCAS.Api.Controllers
     [ApiController]
     public class DoctorScheduleController : BaseController
     {
-        private readonly DoctorScheduleService _doctorScheduleService;
+        private readonly IMediator _mediator;
 
-        public DoctorScheduleController(DoctorScheduleService doctorScheduleService)
+        public DoctorScheduleController(IMediator mediator)
         {
-            _doctorScheduleService = doctorScheduleService;
+            _mediator = mediator;
         }
 
         //POST: api/v1/DoctorSchedule
         [HttpPost]
         public async Task<IActionResult> CreateDoctorSchedule([FromBody] DoctorScheduleReqModel dto)
         {
-            var result = await _doctorScheduleService.CreateSchedule(dto);
+            var command = new CreateDoctorScheduleCommand
+            {
+                DoctorId = dto.DoctorId,
+                ScheduleDate = dto.ScheduleDate,
+                MaxPatients = dto.MaxPatients
+            };
+            
+            var result = await _mediator.Send(command);
             return Excute(result);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDoctorSchedule(int id, [FromBody] DoctorScheduleReqModel dto)
         {
-            var result = await _doctorScheduleService.UpdateSchedule(id, dto);
+            var command = new UpdateDoctorScheduleCommand
+            {
+                Id = id,
+                DoctorId = dto.DoctorId,
+                ScheduleDate = dto.ScheduleDate,
+                MaxPatients = dto.MaxPatients
+            };
+            
+            var result = await _mediator.Send(command);
             return Excute(result);
         }
 
@@ -42,21 +58,28 @@ namespace HCAS.Api.Controllers
             [FromQuery] string? search = null
         )
         {
-            var result = await _doctorScheduleService.GetAllSchedules();
+            var query = new GetAllSchedulesQuery();
+            var result = await _mediator.Send(query);
             return Excute(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSchedules(int id)
         {
-            var result = await _doctorScheduleService.DeleteSchedule(id);
+            var command = new DeleteDoctorScheduleCommand
+            {
+                Id = id
+            };
+            
+            var result = await _mediator.Send(command);
             return Excute(result);
         }
 
         [HttpGet("getAvailable")]
         public async Task<IActionResult> GetAvailableSchedules()
         {
-            var result = await _doctorScheduleService.GetAvailableSchedules();
+            var query = new GetAvailableSchedulesQuery();
+            var result = await _mediator.Send(query);
             return Excute(result);
         }
     }

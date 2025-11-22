@@ -1,10 +1,9 @@
-﻿using HCAS.Domain.Features.Doctors;
-using HCAS.Domain.Models.Doctors;
+﻿using HCAS.Domain.Features.Doctors.Commands;
+using HCAS.Domain.Features.Doctors.Queries;
+using HCAS.Domain.Features.Doctors.Models;
 using HCAS.Shared;
-using Microsoft.AspNetCore.Http;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace HCAS.Api.Controllers
 {
@@ -12,11 +11,11 @@ namespace HCAS.Api.Controllers
     [ApiController]
     public class DoctorController : BaseController
     {
-        private readonly DoctorService _doctorService;
+        private readonly IMediator _mediator;
 
-        public DoctorController(DoctorService doctorService)
+        public DoctorController(IMediator mediator)
         {
-            _doctorService = doctorService;
+            _mediator = mediator;
         }
 
         // GET: api/v1/Doctor
@@ -28,7 +27,15 @@ namespace HCAS.Api.Controllers
             [FromQuery] string? search = null,
             [FromQuery] int? specializationId = null)
         {
-            var result = await _doctorService.GetDoctorsAsync(page, pageSize, search, specializationId);
+            var query = new GetDoctorsQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Search = search,
+                SpecializationId = specializationId
+            };
+            
+            var result = await _mediator.Send(query);
             return Excute(result);   
         }
 
@@ -36,7 +43,13 @@ namespace HCAS.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> RegisterDoctor([FromBody] DoctorsReqModel dto)
         {
-            var result = await _doctorService.RegisterDoctorAsync(dto);
+            var command = new RegisterDoctorCommand
+            {
+                Name = dto.Name,
+                SpecializationId = dto.SpecializationId
+            };
+            
+            var result = await _mediator.Send(command);
             return Excute(result);
         }
 
@@ -44,7 +57,14 @@ namespace HCAS.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDoctor(int id, [FromBody] DoctorsReqModel dto)
         {
-            var result = await _doctorService.UpdateDoctorAsync(id, dto);
+            var command = new UpdateDoctorCommand
+            {
+                Id = id,
+                Name = dto.Name,
+                SpecializationId = dto.SpecializationId
+            };
+            
+            var result = await _mediator.Send(command);
             return Excute(result);
         }
 
@@ -52,7 +72,12 @@ namespace HCAS.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDoctor(int id)
         {
-            var result = await _doctorService.DeleteDoctorAsync(id);
+            var command = new DeleteDoctorCommand
+            {
+                Id = id
+            };
+            
+            var result = await _mediator.Send(command);
             return Excute(result);
         }
     }

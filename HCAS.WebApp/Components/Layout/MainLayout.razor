@@ -1,44 +1,242 @@
 ﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @inherits LayoutComponentBase
 
-<MudAppBar>
-	<MudIconButton Icon="@Icons.Material.Filled.Menu"
-				   Color="Color.Inherit"
-				   Edge="Edge.Start"
-				   OnClick="@((e) => DrawerToggle())" />
-</MudAppBar>
-<MudLayout Style="margin-top:65px;">
+<MudThemeProvider />
 
-	<MudDrawer @bind-Open="@_drawerOpen">
+<MudLayout>
+	<MudAppBar Elevation="1" Color="Color.Primary">
+		<MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+
+		@* <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Class="mr-2" /> *@
+		@* <MudText Typo="Typo.h6">Healthcare Management System</MudText> *@
+
+		<MudSpacer />
+
+		<MudIconButton Icon="@Icons.Material.Filled.Search" Color="Color.Inherit" OnClick="ToggleSearch" />
+
+		<MudMenu Icon="@Icons.Material.Filled.AccountCircle"
+				 Color="Color.Inherit"
+				 Direction="Direction.Bottom"
+				 OffsetY="true">
+			<ActivatorContent>
+				<MudIconButton Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" Edge="Edge.End" />
+			</ActivatorContent>
+			<ChildContent>
+				<MudMenuItem OnClick="@(() => { })">
+					<MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-3" />
+					Profile
+				</MudMenuItem>
+				<MudMenuItem OnClick="@(() => { })">
+					<MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-3" />
+					Settings
+				</MudMenuItem>
+				<MudDivider />
+				<MudMenuItem OnClick="@(() => { })">
+					<MudIcon Icon="@Icons.Material.Filled.Logout" Class="mr-3" />
+					Logout
+				</MudMenuItem>
+			</ChildContent>
+		</MudMenu>
+	</MudAppBar>
+
+	<MudDrawer @bind-Open="_drawerOpen" Elevation="2" Variant="@DrawerVariant.Responsive">
+		<MudDrawerHeader>
+			<div class="flex-col items-center space-y-2">
+				<MudIcon Icon="@Icons.Material.Filled.LocalHospital"
+						 Class="text-primary text-4xl" />
+				@if (_drawerOpen)
+				{
+					<MudText Typo="Typo.h5" Class="mt-1">HCAS</MudText>
+					<MudText Typo="Typo.body2" Class="mud-text-secondary">
+						Healthcare Appointment System
+					</MudText>
+				}
+			</div>
+		</MudDrawerHeader>
+
+		@if (_drawerOpen)
+		{
+			<div class="px-4 pb-4">
+				<MudTextField @bind-Value="searchText"
+							  Placeholder="Search menu..."
+							  Adornment="Adornment.Start"
+							  AdornmentIcon="@Icons.Material.Filled.Search"
+							  Variant="MudBlazor.Variant.Outlined"
+							  Margin="Margin.Dense"
+							  Class="mt-2" />
+			</div>
+		}
+
 		<MudNavMenu Class="mud-width-full">
-			<MudText Typo="Typo.h6" Class="px-4">HCAS</MudText>
-			<MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Navigation</MudText>
-			<MudDivider Class="my-2" />
+			@{
+				var groupedItems = menuItems.GroupBy(m => m.Group);
+				previousGroup = string.Empty;
+			}
 
-			<MudNavLink Href="/Dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-			<MudNavLink Href="/Staff" Icon="@Icons.Material.Filled.Groups">Staff</MudNavLink>
-			<MudNavLink Href="/Doctor" Icon="@Icons.Material.Filled.MedicalServices">Doctor</MudNavLink>
-			<MudNavLink Href="/DoctorSchedule" Icon="@Icons.Material.Filled.EventAvailable">Doctor Schedule</MudNavLink>
-			<MudNavLink Href="/Appointment" Icon="@Icons.Material.Filled.Assignment">Appointment</MudNavLink>
-			<MudNavLink Href="/Patient" Icon="@Icons.Material.Filled.LocalHospital">Patient</MudNavLink>
-			<MudNavLink Href="/Specialization" Icon="@Icons.Material.Filled.ListAlt">Specialization</MudNavLink>
+			@foreach (var group in groupedItems)
+			{
+				var groupItems = string.IsNullOrWhiteSpace(searchText)
+				? group.ToList()
+				: group.Where(m =>
+				m.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+				m.Group.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
+
+				@if (groupItems.Any())
+				{
+					@if (!string.IsNullOrEmpty(group.Key) && groupItems.Count > 1)
+					{
+						<MudNavGroup Title="@group.Key" Icon="@GetGroupIcon(group.Key)" Expanded="true">
+							@foreach (var menuItem in groupItems)
+							{
+								<MudNavLink Href="@menuItem.Href" Icon="@menuItem.Icon">
+									@menuItem.Title @if (!string.IsNullOrEmpty(menuItem.Badge)) {
+									<MudChip T="string" Size="Size.Small" Color="@menuItem.BadgeColor" Class="ml-2">@menuItem.Badge</MudChip>
+								}
+							</MudNavLink>
+						}
+					</MudNavGroup>
+				}
+				else
+				{
+					@foreach (var menuItem in groupItems)
+					{
+						<MudNavLink Href="@menuItem.Href" Icon="@menuItem.Icon">
+							@menuItem.Title @if (!string.IsNullOrEmpty(menuItem.Badge)) {
+							<MudChip T="string" Size="Size.Small" Color="@menuItem.BadgeColor" Class="ml-2">@menuItem.Badge</MudChip>
+						}
+					</MudNavLink>
+				}
+			}
+						}
+						}
+
+			@if (!menuItems.Any(m =>
+						m.Title.Contains(searchText ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+						m.Group.Contains(searchText ?? string.Empty, StringComparison.OrdinalIgnoreCase)) &&
+						!string.IsNullOrEmpty(searchText))
+			{
+				<div class="m-4 p-6 text-center">
+					<MudIcon Icon="@Icons.Material.Filled.SearchOff"
+							 Class="text-disabled text-5xl mb-2" />
+					<MudText Typo="Typo.body2" Class="mud-text-secondary">
+						No results found for "@searchText"
+					</MudText>
+				</div>
+			}
 		</MudNavMenu>
-
 	</MudDrawer>
 
-	<MudMainContent Style="padding-top: 10px;">
-		<MudContainer MaxWidth="MaxWidth.Large">
+	<MudMainContent>
+		<div class="container mx-auto max-w-7xl px-4 py-6">
 			@Body
-		</MudContainer>
+		</div>
 	</MudMainContent>
 </MudLayout>
 
 @code {
-	bool _drawerOpen = true;
+	private bool _drawerOpen = true;
+	private string searchText = string.Empty;
+	private string previousGroup = string.Empty;
 
-	void DrawerToggle()
+	private class MenuItem
+	{
+		public string Title { get; set; } = string.Empty;
+		public string Href { get; set; } = string.Empty;
+		public string Icon { get; set; } = string.Empty;
+		public string Group { get; set; } = string.Empty;
+		public string? Badge { get; set; }
+		public MudBlazor.Color BadgeColor { get; set; } = MudBlazor.Color.Default;
+	}
+
+	private List<MenuItem> menuItems = new()
+	{
+		new MenuItem
+		{
+			Title = "Dashboard",
+			Href = "/",
+			Icon = Icons.Material.Filled.Dashboard,
+			Group = "Overview"
+		},
+		new MenuItem
+		{
+			Title = "Appointments",
+			Href = "/Appointment",
+			Icon = Icons.Material.Filled.Assignment,
+			Group = "Management",
+			Badge = "New",
+			BadgeColor = MudBlazor.Color.Success
+		},
+		new MenuItem
+		{
+			Title = "Patients",
+			Href = "/Patient",
+			Icon = Icons.Material.Filled.LocalHospital,
+			Group = "Management"
+		},
+		new MenuItem
+		{
+			Title = "Doctors",
+			Href = "/Doctor",
+			Icon = Icons.Material.Filled.MedicalServices,
+			Group = "Management"
+		},
+		new MenuItem
+		{
+			Title = "Doctor Schedules",
+			Href = "/DoctorSchedule",
+			Icon = Icons.Material.Filled.EventAvailable,
+			Group = "Management"
+		},
+		new MenuItem
+		{
+			Title = "Staff",
+			Href = "/Staff",
+			Icon = Icons.Material.Filled.Groups,
+			Group = "Management"
+		},
+		new MenuItem
+		{
+			Title = "Specializations",
+			Href = "/Specialization",
+			Icon = Icons.Material.Filled.ListAlt,
+			Group = "Configuration"
+		}
+	};
+
+	private string GetGroupIcon(string group)
+	{
+		return group switch
+		{
+			"Overview" => Icons.Material.Filled.Dashboard,
+			"Management" => Icons.Material.Filled.Business,
+			"Configuration" => Icons.Material.Filled.Settings,
+			_ => Icons.Material.Filled.Folder
+		};
+	}
+
+	private void DrawerToggle()
 	{
 		_drawerOpen = !_drawerOpen;
+	}
+
+	private void ToggleSearch()
+	{
+		if (_drawerOpen)
+		{
+			// Focus search field if drawer is open
+			_ = JSRuntime.InvokeVoidAsync("eval", "setTimeout(() => { const input = document.querySelector('input[placeholder=\"Search menu...\"]'); if (input) input.focus(); }, 100);");
+		}
+		else
+		{
+			_drawerOpen = true;
+			// Focus search after drawer opens
+			_ = Task.Delay(300).ContinueWith(_ =>
+				JSRuntime.InvokeVoidAsync("eval", "setTimeout(() => { const input = document.querySelector('input[placeholder=\"Search menu...\"]'); if (input) input.focus(); }, 100);"));
+		}
 	}
 }
 
@@ -50,7 +248,6 @@
 </div>
 
 @* Required *@
-<MudThemeProvider />
 <MudPopoverProvider />
 
 @* Needed for dialogs *@

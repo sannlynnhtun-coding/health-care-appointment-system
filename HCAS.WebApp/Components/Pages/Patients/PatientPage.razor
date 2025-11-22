@@ -2,7 +2,7 @@
 @inject PatientService patientService
 @inject IDialogService DialogService
 @using HCAS.Domain.Features.Patient
-@using HCAS.Domain.Models.Patient
+@using HCAS.Domain.Features.Patient.Models
 @using HCAS.Shared
 @using MudBlazor
 @using Radzen.Blazor
@@ -61,12 +61,19 @@
         </RowTemplate>
     </MudTable>
 
-    <MudPagination Rectangular="true"
-                   Variant="MudBlazor.Variant.Outlined"
-                   SelectedChanged="PageChanged"
-                   Count="@(totalCount / pageSize + (totalCount % pageSize > 0 ? 1 : 0))"
-                   Class="pa-4"
-                   Selected="page" />
+    @if (totalCount > 0)
+    {
+        <div class="d-flex justify-space-between align-center mt-4">
+            <MudText Typo="Typo.body2">
+                Showing @((page - 1) * pageSize + 1) to @(Math.Min(page * pageSize, totalCount)) of @totalCount entries
+            </MudText>
+            <MudPagination Rectangular="true"
+                           Variant="MudBlazor.Variant.Outlined"
+                           SelectedChanged="PageChanged"
+                           Count="@(totalCount / pageSize + (totalCount % pageSize > 0 ? 1 : 0))"
+                           Selected="page" />
+        </div>
+    }
 </MudPaper>
 
 @code {
