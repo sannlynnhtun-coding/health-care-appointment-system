@@ -14,3 +14,4 @@ namespace HCAS.Domain.Features.Doctors.Models
         public bool DelFlg { get; set; }
     }
 }
+

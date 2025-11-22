@@ -18,3 +18,4 @@ namespace HCAS.Domain.Features.DoctorSchedule.Models
         public int? AvailableSlots { get; set; }
     }
 }
+

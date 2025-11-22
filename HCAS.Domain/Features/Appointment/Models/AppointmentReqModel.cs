@@ -25,3 +25,4 @@ namespace HCAS.Domain.Features.Appointment.Models
         //public virtual DoctorSchedule Schedule { get; set; } = null!;
     }
 }
+

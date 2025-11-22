@@ -12,3 +12,4 @@ namespace HCAS.Domain.Features.Specializations.Models
         public string Name { get; set; } = null!;
     }
 }
+

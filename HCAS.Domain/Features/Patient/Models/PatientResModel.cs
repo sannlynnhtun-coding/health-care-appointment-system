@@ -21,3 +21,4 @@ namespace HCAS.Domain.Features.Patient.Models
         public string Email { get; set; }
     }
 }
+

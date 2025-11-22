@@ -22,3 +22,4 @@ namespace HCAS.Domain.Features.Doctors.Models
         //public virtual Specialization? Specialization { get; set; }
     }
 }
+

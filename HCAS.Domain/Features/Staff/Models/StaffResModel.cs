@@ -24,3 +24,4 @@ namespace HCAS.Domain.Features.Staff.Models
         public bool del_flg { get; set; }
     }
 }
+
