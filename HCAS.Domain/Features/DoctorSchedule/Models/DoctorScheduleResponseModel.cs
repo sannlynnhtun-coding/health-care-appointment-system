@@ -19,3 +19,4 @@ namespace HCAS.Domain.Features.DoctorSchedule.Models
     }
 }
 
+

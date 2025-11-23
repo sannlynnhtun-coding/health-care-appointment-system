@@ -26,3 +26,4 @@ namespace HCAS.Domain.Features.Appointment.Models
     }
 }
 
+

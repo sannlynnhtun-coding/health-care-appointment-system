@@ -14,3 +14,4 @@ namespace HCAS.Domain.Features.Specializations.Models
     }
 }
 
+
