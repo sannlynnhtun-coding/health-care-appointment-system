@@ -1,0 +1,419 @@
+@page "/appointments"
+@inject AppointmentService AppointmentService
+@inject DoctorService DoctorService
+@inject PatientService PatientService
+
+<div class="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 font-sans">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Appointment Scheduler
+            </h1>
+            <p class="text-slate-500 font-medium">Manage clinical sessions, schedules, and patient records.</p>
+        </div>
+        
+        <div class="flex items-center gap-3 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+            <button class="@(viewMode == ViewMode.List ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-50") px-4 py-2 rounded-lg text-sm font-bold transition-all" @onclick="() => SetView(ViewMode.List)">List</button>
+            <button class="@(viewMode == ViewMode.Month ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-50") px-4 py-2 rounded-lg text-sm font-bold transition-all" @onclick="() => SetView(ViewMode.Month)">Month</button>
+            <button class="@(viewMode == ViewMode.Day ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-50") px-4 py-2 rounded-lg text-sm font-bold transition-all" @onclick="() => SetView(ViewMode.Day)">Day</button>
+            <div class="w-px h-6 bg-slate-200 mx-1"></div>
+            <button class="bg-primary hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-bold text-sm transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-2" @onclick="PrepareAdd">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Book Slot
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="flex flex-col items-center justify-center py-24">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p class="mt-4 text-slate-500 font-medium italic">Synchronizing clinical schedule...</p>
+        </div>
+    }
+    else
+    {
+        @if (viewMode == ViewMode.List)
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach (var appt in appointments)
+                {
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-lg transition-all relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-3">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest @(appt.Status == "Active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")">
+                                @appt.Status
+                            </span>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
+                                <span>Ref #@appt.AppointmentNumber • @appt.DurationMinutes mins</span>
+                                <span class="text-emerald-600 font-bold">@appt.Cost.ToString("N0") MMK</span>
+                            </div>
+                            <h3 class="text-slate-900 font-black text-xl">@(appt.AppointmentDate?.ToString("MMM dd, h:mm tt") ?? "TBD")</h3>
+                        </div>
+
+                        <div class="space-y-4 mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center font-bold">@(appt.PatientName?.Length > 0 ? appt.PatientName[0] : '?')</div>
+                                <div>
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase">Patient</div>
+                                    <div class="text-sm font-bold text-slate-900 leading-tight">@appt.PatientName</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-emerald-50 text-primary rounded-xl flex items-center justify-center">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase">Consultant</div>
+                                    <div class="text-sm font-bold text-slate-900 leading-tight">Dr. @appt.DoctorName</div>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(appt.Notes))
+                            {
+                                <div class="bg-slate-50 p-3 rounded-xl border-l-4 border-emerald-500 italic text-xs text-slate-600">
+                                    @appt.Notes
+                                </div>
+                            }
+                        </div>
+
+                        <div class="flex justify-end pt-4 border-t border-slate-50">
+                            @if (appt.Status != "Cancelled")
+                            {
+                                <button class="text-red-500 hover:text-red-700 text-xs font-black uppercase tracking-widest flex items-center gap-1 transition-colors" @onclick="() => CancelAppointment(appt.Id)">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                    Cancel
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else if (viewMode == ViewMode.Month)
+        {
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                <div class="bg-slate-900 text-white p-6 flex justify-between items-center">
+                    <button class="hover:bg-slate-800 p-2 rounded-full transition-colors" @onclick="PrevMonth">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <h2 class="text-2xl font-black tracking-tight">@currentMonth.ToString("MMMM yyyy")</h2>
+                    <button class="hover:bg-slate-800 p-2 rounded-full transition-colors" @onclick="NextMonth">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <div class="min-w-[700px]">
+                        <div class="grid grid-cols-7 border-b border-slate-100">
+                            @foreach (var day in Enum.GetNames(typeof(DayOfWeek)))
+                            {
+                                <div class="py-4 text-center text-xs font-black text-slate-400 uppercase border-r border-slate-50 last:border-0">@day.Substring(0, 3)</div>
+                            }
+                        </div>
+                        <div class="grid grid-cols-7">
+                            @for (int i = 0; i < calendarDays.Count; i++)
+                            {
+                                var day = calendarDays[i];
+                                var isCurrentMonth = day.Month == currentMonth.Month;
+                                var appts = appointments.Where(a => a.AppointmentDate?.Date == day.Date).ToList();
+                                
+                                <div class="min-h-[140px] p-2 border-r border-b border-slate-100 last:border-r-0 group hover:bg-slate-50/50 transition-colors @(isCurrentMonth ? "" : "bg-slate-50/30 opacity-40") @(day.Date == DateTime.Today ? "bg-emerald-50/30" : "")">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="w-7 h-7 flex items-center justify-center rounded-full @(day.Date == DateTime.Today ? "bg-primary text-white font-black" : "text-slate-900 font-bold") text-sm">@day.Day</span>
+                                        @if (appts.Any())
+                                        {
+                                            <span class="text-[10px] bg-emerald-100 text-emerald-700 font-black px-1.5 py-0.5 rounded-md">@appts.Count</span>
+                                        }
+                                    </div>
+                                    <div class="space-y-1">
+                                        @foreach (var a in appts.Take(3))
+                                        {
+                                            <div class="text-[10px] truncate px-2 py-1 bg-white border border-slate-200 rounded-md font-bold text-slate-700 shadow-sm border-l-2 border-l-emerald-500">
+                                                @a.AppointmentDate?.ToString("h:mm") | @a.PatientName
+                                            </div>
+                                        }
+                                        @if (appts.Count > 3)
+                                        {
+                                            <div class="text-[9px] text-center font-black text-slate-400 py-1">+ @(appts.Count - 3) more</div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (viewMode == ViewMode.Day)
+        {
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                <div class="bg-slate-900 text-white p-6 flex justify-between items-center">
+                    <button class="hover:bg-slate-800 p-2 rounded-full transition-colors" @onclick="PrevDay">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <div class="text-center">
+                        <h2 class="text-2xl font-black tracking-tight">@currentDay.ToString("dddd")</h2>
+                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest">@currentDay.ToString("MMMM dd, yyyy")</p>
+                    </div>
+                    <button class="hover:bg-slate-800 p-2 rounded-full transition-colors" @onclick="NextDay">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+                <div class="p-8 space-y-4">
+                    @for (int hour = 8; hour <= 19; hour++)
+                    {
+                        var timeSlot = currentDay.Date.AddHours(hour);
+                        var slotAppts = appointments.Where(a => a.AppointmentDate?.Date == currentDay.Date && a.AppointmentDate?.Hour == hour).ToList();
+                        
+                        <div class="flex gap-6 group">
+                            <div class="w-20 pt-1 text-right">
+                                <span class="text-sm font-black text-slate-400 uppercase tracking-tighter">@timeSlot.ToString("h:mm")</span>
+                            </div>
+                            <div class="flex-1 relative border-t border-slate-100 pt-3 pb-6 group-last:border-b group-last:mb-8">
+                                @if (!slotAppts.Any())
+                                {
+                                    <div class="text-slate-200 text-sm italic font-medium">No sessions scheduled</div>
+                                }
+                                else
+                                {
+                                    <div class="flex flex-col gap-3">
+                                        @foreach (var a in slotAppts)
+                                        {
+                                            <div class="flex items-center justify-between bg-emerald-50/50 p-4 rounded-2xl border-l-4 border-emerald-500 shadow-sm border border-emerald-100 group/item">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="w-12 h-12 bg-white rounded-xl shadow-inner flex items-center justify-center font-black text-primary border border-emerald-100">
+                                                        @(a.AppointmentDate?.ToString("mm") ?? "00")
+                                                        <span class="text-[8px] opacity-30 ml-0.5">m</span>
+                                                    </div>
+                                                    <div>
+                                                        <div class="text-sm font-black text-slate-900">@a.PatientName <span class="text-[10px] font-medium text-slate-400">(@a.DurationMinutes m)</span></div>
+                                                        <div class="text-[10px] font-bold text-emerald-600 uppercase">Dr. @a.DoctorName</div>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-4">
+                                                    <div class="text-right">
+                                                        <div class="text-xs font-black text-slate-400 uppercase tracking-widest">Fee</div>
+                                                        <div class="text-sm font-black text-slate-900">@a.Cost.ToString("N0") MMK</div>
+                                                    </div>
+                                                    <button class="p-2 bg-white text-red-500 rounded-lg shadow-sm border border-red-50 opacity-0 group-hover/item:opacity-100 transition-opacity" @onclick="() => CancelAppointment(a.Id)">
+                                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in duration-300 overflow-hidden">
+            <div class="bg-emerald-600 p-8 text-white relative">
+                <button class="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-full transition-colors" @onclick="CloseModal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30">
+                        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black">Clinical Booking</h2>
+                        <p class="text-emerald-100 font-medium opacity-80 uppercase tracking-widest text-xs">New Appointment Entry</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 bg-white max-h-[70vh] overflow-y-auto">
+                <div class="space-y-6">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Patient Profile</label>
+                        <select class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 appearance-none shadow-sm" @bind="reqModel.PatientId">
+                            <option value="0">Identify Patient...</option>
+                            @foreach (var p in patients)
+                            {
+                                <option value="@p.Id">@p.Name</option>
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Consulting Specialist</label>
+                        <select class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 appearance-none shadow-sm" @bind="reqModel.DoctorId">
+                            <option value="0">Select Consultant...</option>
+                            @foreach (var d in doctors)
+                            {
+                                <option value="@d.Id">Dr. @d.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Service Cost (MMK)</label>
+                        <input type="number" step="5000" class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 shadow-sm" @bind="reqModel.Cost" placeholder="0" />
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duration</label>
+                        <select class="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 appearance-none shadow-sm" @bind="reqModel.DurationMinutes">
+                            <option value="30">30 Minutes (Short)</option>
+                            <option value="60">1 Hour (Standard)</option>
+                            <option value="90">1.5 Hours (Ext)</option>
+                            <option value="120">2 Hours (Max)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                            <input type="date" class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 shadow-sm" 
+                                   value="@reqModel.AppointmentDate.ToString("yyyy-MM-dd")" 
+                                   @onchange="(e) => UpdateDate(e.Value?.ToString())" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Time</label>
+                            <input type="time" step="1800" class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 shadow-sm" 
+                                   value="@reqModel.AppointmentDate.ToString("HH:mm")" 
+                                   @onchange="(e) => UpdateTime(e.Value?.ToString())" />
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clinical Notes</label>
+                        <textarea class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary outline-none transition-all font-bold text-slate-900 shadow-sm min-h-[141px] resize-none" @bind="reqModel.Notes" placeholder="Record details about patient condition, observations, or follow-up instructions..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 md:p-8 bg-slate-900 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="text-white/50 text-[10px] font-black uppercase tracking-[0.2em] text-center sm:text-left">Validated Clinical Entry System</div>
+                <div class="flex gap-4 w-full sm:w-auto">
+                    <button class="flex-1 sm:flex-none px-6 py-3 text-white/70 font-black uppercase tracking-widest text-xs hover:text-white transition-colors border border-white/10 rounded-xl sm:border-0" @onclick="CloseModal">Discard</button>
+                    <button class="flex-1 sm:flex-none px-6 py-3 bg-emerald-500 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-xl hover:bg-emerald-400 hover:shadow-emerald-500/20 transition-all active:scale-95" @onclick="SaveAppointment">Confirm Records</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum ViewMode { List, Month, Day }
+    private ViewMode viewMode = ViewMode.Month;
+    private DateTime currentMonth = DateTime.Today;
+    private DateTime currentDay = DateTime.Today;
+    private List<DateTime> calendarDays = new();
+
+    private List<AppointmentResModel> appointments = new();
+    private List<DoctorsResModel> doctors = new();
+    private List<PatientResModel> patients = new();
+    private bool isLoading = true;
+    private bool showModal = false;
+    private AppointmentReqModel reqModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        CalculateCalendar();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        var apptResult = await AppointmentService.GetAppointmentsAsync();
+        if (apptResult is { IsSuccess: true, Data: not null }) appointments = apptResult.Data;
+        
+        var docResult = await DoctorService.GetDoctorsAsync(1, 100);
+        if (docResult is { IsSuccess: true, Data: not null, Data.Items: not null }) doctors = docResult.Data.Items.ToList();
+
+        var patResult = await PatientService.GetPatientsAsync(1, 100);
+        if (patResult is { IsSuccess: true, Data: not null, Data.Items: not null }) patients = patResult.Data.Items.ToList();
+        
+        isLoading = false;
+    }
+
+    private void SetView(ViewMode mode) => viewMode = mode;
+
+    private void CalculateCalendar()
+    {
+        var firstDayOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+        
+        var startDay = firstDayOfMonth.AddDays(-(int)firstDayOfMonth.DayOfWeek);
+        var endDay = lastDayOfMonth.AddDays(6 - (int)lastDayOfMonth.DayOfWeek);
+
+        calendarDays.Clear();
+        for (var day = startDay; day <= endDay; day = day.AddDays(1))
+        {
+            calendarDays.Add(day);
+        }
+    }
+
+    private void PrevMonth() { currentMonth = currentMonth.AddMonths(-1); CalculateCalendar(); }
+    private void NextMonth() { currentMonth = currentMonth.AddMonths(1); CalculateCalendar(); }
+    private void PrevDay() => currentDay = currentDay.AddDays(-1);
+    private void NextDay() => currentDay = currentDay.AddDays(1);
+
+    private void UpdateDate(string? val)
+    {
+        if (DateTime.TryParse(val, out var d))
+            reqModel.AppointmentDate = d.Date.Add(reqModel.AppointmentDate.TimeOfDay);
+    }
+
+    private void UpdateTime(string? val)
+    {
+        if (TimeSpan.TryParse(val, out var t))
+        {
+            // Standardize minutes to 00 or 30
+            var roundedMinutes = t.Minutes < 15 ? 0 : (t.Minutes < 45 ? 30 : 0);
+            var hourOffset = t.Minutes >= 45 ? 1 : 0;
+            var standardizedTime = new TimeSpan(t.Hours + hourOffset, roundedMinutes, 0);
+
+            reqModel.AppointmentDate = reqModel.AppointmentDate.Date.Add(standardizedTime);
+        }
+    }
+
+    private void PrepareAdd()
+    {
+        reqModel = new AppointmentReqModel 
+        { 
+            AppointmentDate = DateTime.Today.AddDays(1).AddHours(9),
+            Status = "Active",
+            AppointmentNumber = DateTime.Now.Millisecond + DateTime.Now.Second,
+            Cost = new Random().Next(4, 17) * 5000
+        };
+        showModal = true;
+    }
+
+    private async Task SaveAppointment()
+    {
+        if (reqModel.PatientId == 0 || reqModel.DoctorId == 0) return;
+
+        await AppointmentService.CreateAppointmentAsync(reqModel);
+        CloseModal();
+        await LoadData();
+    }
+
+    private async Task CancelAppointment(int id)
+    {
+        await AppointmentService.CancelAppointmentAsync(id);
+        await LoadData();
+    }
+
+    private void CloseModal() => showModal = false;
+}

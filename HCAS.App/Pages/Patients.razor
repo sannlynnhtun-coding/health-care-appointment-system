@@ -1,0 +1,215 @@
+@page "/patients"
+@inject PatientService PatientService
+
+<div class="p-4 md:p-8 max-w-7xl mx-auto font-sans space-y-6 md:space-y-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+            <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Patient Registry
+        </h1>
+        <button class="w-full sm:w-auto bg-primary hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center gap-2" @onclick="PrepareAdd">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            New Patient
+        </button>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-xl border border-slate-200">
+        <div class="relative flex-1">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" placeholder="Search patients..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" @bind="searchQuery" @bind:event="oninput" />
+        </div>
+        <button class="w-full sm:w-auto bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-lg transition-colors flex items-center justify-center gap-2" @onclick="LoadPatients">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Search
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="flex flex-col items-center justify-center py-24">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p class="mt-4 text-slate-500 font-medium italic">Retrieving patient records...</p>
+        </div>
+    }
+    else if (patients == null || !patients.Any())
+    {
+        <div class="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <line x1="17" y1="8" x2="21" y2="12"></line>
+                    <line x1="21" y1="8" x2="17" y2="12"></line>
+                </svg>
+            </div>
+            <p class="text-slate-500 text-lg font-medium">No patient records found.</p>
+            <button class="mt-4 text-primary font-semibold hover:underline" @onclick="PrepareAdd">Register the first patient</button>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <table class="w-full text-left min-w-[600px]">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-sm">
+                        <th class="px-6 py-4">Patient Details</th>
+                        <th class="px-6 py-4">Gender</th>
+                        <th class="px-6 py-4">Date of Birth</th>
+                        <th class="px-6 py-4">Contact Info</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach (var patient in patients)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center font-bold text-lg">
+                                        @patient.Name[0]
+                                    </div>
+                                    <div class="font-bold text-slate-900">@patient.Name</div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600">@patient.Gender</td>
+                            <td class="px-6 py-4 text-slate-600">@patient.DateOfBirth.ToShortDateString()</td>
+                            <td class="px-6 py-4">
+                                <div class="text-slate-900 text-sm">@patient.Phone</div>
+                                <div class="text-slate-500 text-xs">@patient.Email</div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button class="p-2 text-slate-400 hover:text-primary transition-colors hover:bg-emerald-50 rounded-lg" @onclick="() => PrepareEdit(patient)">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    <button class="p-2 text-slate-400 hover:text-red-500 transition-colors hover:bg-red-50 rounded-lg" @onclick="() => DeletePatient(patient.Id)">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-900">@(editPatientId == null ? "Register New Patient" : "Update Records")</h2>
+                <button class="text-slate-400 hover:text-slate-600" @onclick="CloseModal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white">
+                <div class="col-span-1 sm:col-span-2 space-y-1.5">
+                    <label class="text-sm font-semibold text-slate-700">Full Name</label>
+                    <input type="text" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" @bind="reqModel.Name" placeholder="Enter patient's full name" />
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-sm font-semibold text-slate-700">Gender</label>
+                    <select class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all bg-white" @bind="reqModel.Gender">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-sm font-semibold text-slate-700">Date of Birth</label>
+                    <input type="date" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" @bind="reqModel.DateOfBirth" />
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-sm font-semibold text-slate-700">Phone Number</label>
+                    <input type="tel" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" @bind="reqModel.Phone" placeholder="+1 234 567 890" />
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-sm font-semibold text-slate-700">Email Address</label>
+                    <input type="email" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" @bind="reqModel.Email" placeholder="patient@example.com" />
+                </div>
+            </div>
+            <div class="p-4 md:p-6 bg-slate-50 rounded-b-2xl border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+                <button class="w-full sm:w-auto px-5 py-2 text-slate-600 font-semibold hover:bg-slate-200 rounded-lg transition-colors border border-slate-200 sm:border-0" @onclick="CloseModal">Discard</button>
+                <button class="w-full sm:w-auto px-5 py-2 bg-primary text-white font-bold rounded-lg shadow-sm hover:bg-emerald-700 transition-all active:scale-95" @onclick="SavePatient">Save Patient</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PatientResModel> patients = new();
+    private string searchQuery = "";
+    private bool isLoading = true;
+    private bool showModal = false;
+    private int? editPatientId = null;
+    private PatientReqModel reqModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPatients();
+    }
+
+    private async Task LoadPatients()
+    {
+        isLoading = true;
+        var result = await PatientService.GetPatientsAsync(1, 100, searchQuery);
+        if (result.IsSuccess && result.Data != null)
+        {
+            patients = result.Data.Items.ToList();
+        }
+        else
+        {
+            patients = new();
+        }
+        isLoading = false;
+    }
+
+    private void PrepareAdd()
+    {
+        editPatientId = null;
+        reqModel = new PatientReqModel { DateOfBirth = System.DateTime.Today.AddYears(-20) };
+        showModal = true;
+    }
+
+    private void PrepareEdit(PatientResModel patient)
+    {
+        editPatientId = patient.Id;
+        reqModel = new PatientReqModel 
+        { 
+            Name = patient.Name, 
+            DateOfBirth = patient.DateOfBirth, 
+            Gender = patient.Gender, 
+            Phone = patient.Phone, 
+            Email = patient.Email 
+        };
+        showModal = true;
+    }
+
+    private async Task SavePatient()
+    {
+        if (editPatientId == null)
+            await PatientService.RegisterPatientAsync(reqModel);
+        else
+            await PatientService.UpdatePatientAsync(editPatientId.Value, reqModel);
+
+        CloseModal();
+        await LoadPatients();
+    }
+
+    private async Task DeletePatient(int id)
+    {
+        await PatientService.DeletePatientAsync(id);
+        await LoadPatients();
+    }
+
+    private void CloseModal() => showModal = false;
+}
