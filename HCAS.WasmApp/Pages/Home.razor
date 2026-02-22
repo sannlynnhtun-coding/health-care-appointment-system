@@ -1,0 +1,270 @@
+﻿@page "/"
+@inject DoctorService DoctorService
+@inject PatientService PatientService
+@inject AppointmentService AppointmentService
+@inject IJSRuntime JSRuntime
+
+<div class="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 font-sans">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight">System Intelligence</h1>
+            <p class="text-slate-500 font-medium">Global performance and clinical activity overview.</p>
+        </div>
+        <div class="bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3 text-xs font-black text-slate-600 uppercase tracking-widest">
+            <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            Online Registry: @DateTime.Now.ToString("dd MMM yyyy")
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group">
+            <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-primary group-hover:text-white transition-colors">
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Consultants</div>
+            <div class="text-3xl font-black text-slate-900 mt-1 tracking-tighter">@doctorCount</div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group">
+            <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Patient Records</div>
+            <div class="text-3xl font-black text-slate-900 mt-1 tracking-tighter">@patientCount</div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group">
+            <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <div class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Active Sessions</div>
+            <div class="text-3xl font-black text-slate-900 mt-1 tracking-tighter">@appointmentCount</div>
+        </div>
+
+        <div class="bg-slate-900 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden group">
+            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500 opacity-20 rounded-full group-hover:scale-125 transition-transform"></div>
+            <div class="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mb-5">
+                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div class="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">Total Projected</div>
+            <div class="text-3xl font-black text-white mt-1 tracking-tighter">@totalRevenue.ToString("N0") MMK</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Charts -->
+        <div class="lg:col-span-2 space-y-8">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
+                    <div class="w-2 h-8 bg-primary rounded-full"></div>
+                    Clinical Activity Volume
+                </h3>
+                <div id="trend-chart" class="h-[300px] md:h-[380px]"></div>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center">
+                        <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    Upcoming Today
+                </h3>
+                <div class="grid grid-cols-1 gap-4">
+                    @if (upcomingToday != null && upcomingToday.Any())
+                    {
+                        @foreach (var appt in upcomingToday)
+                        {
+                            <div class="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 hover:bg-white hover:shadow-md transition-all group">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center font-black text-primary text-lg border border-emerald-100 uppercase">
+                                        @(appt.PatientName?.Length > 0 ? appt.PatientName[0] : '?')
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-black text-slate-900">@appt.PatientName</div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase">Scheduled at @appt.AppointmentDate?.ToString("h:mm tt")</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="px-3 py-1 bg-white border border-emerald-200 rounded-full text-[10px] font-black text-primary uppercase tracking-widest">Confirmed</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="py-12 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No Appointments for Today</div>
+                    }
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
+                    <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center">
+                        <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    Recent Patient Log
+                </h3>
+                <div class="grid grid-cols-1 gap-4">
+                    @if (recentAppointments != null && recentAppointments.Any())
+                    {
+                        @foreach (var appt in recentAppointments)
+                        {
+                            <div class="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center font-black text-slate-900 text-lg border border-slate-100 uppercase">
+                                        @(appt.PatientName?.Length > 0 ? appt.PatientName[0] : '?')
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-black text-slate-900">@appt.PatientName</div>
+                                        <div class="text-[10px] font-bold text-slate-400 uppercase">Consulted by Dr. @appt.DoctorName</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-black text-emerald-600">@appt.Cost.ToString("N0") MMK</div>
+                                    <div class="text-[9px] font-black text-slate-300 uppercase tracking-widest">@appt.AppointmentDate?.ToString("dd MMM, h:mm tt")</div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="py-12 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No Recent Interactions</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Widgets -->
+        <div class="space-y-8">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/5 rounded-full"></div>
+                <h3 class="text-lg font-black text-slate-900 mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                    Specialty Mix
+                </h3>
+                <div id="distribution-chart" class="h-[250px] md:h-[300px]"></div>
+            </div>
+
+            <div class="bg-emerald-600 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-emerald-500/20">
+                <h3 class="text-lg font-black mb-4">Practice Health</h3>
+                <p class="text-emerald-100 text-xs font-medium mb-6 leading-relaxed opacity-80">Your facility's efficiency is at its peak. Keep managing appointments with the new clinical notes feature.</p>
+                <div class="flex items-center gap-4">
+                    <div class="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
+                        <div class="w-[92%] h-full bg-white rounded-full"></div>
+                    </div>
+                    <span class="text-sm font-black italic">92%</span>
+                </div>
+            </div>
+
+            <!-- Last Patient Record Feature -->
+            <div class="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl">
+                 <h3 class="text-sm font-black uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                    Last Recorded Observation
+                </h3>
+                @if (recentAppointments != null && recentAppointments.Any(a => !string.IsNullOrEmpty(a.Notes)))
+                {
+                    var lastNoteAppt = recentAppointments.First(a => !string.IsNullOrEmpty(a.Notes));
+                    <div class="space-y-4">
+                        <div class="italic text-slate-400 text-sm leading-relaxed">
+                            "@lastNoteAppt.Notes"
+                        </div>
+                        <div class="pt-4 border-t border-white/5 flex items-center gap-3">
+                             <div class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center font-black text-xs">@(lastNoteAppt.PatientName?.Length > 0 ? lastNoteAppt.PatientName[0] : '?')</div>
+                             <div>
+                                <div class="text-xs font-black">@lastNoteAppt.PatientName</div>
+                                <div class="text-[9px] font-black text-white/30 uppercase tracking-widest">Medical Log History</div>
+                             </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-white/20 text-xs italic">No clinical notes recorded in the current session.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int doctorCount = 0;
+    private int patientCount = 0;
+    private int appointmentCount = 0;
+    private decimal totalRevenue = 0;
+    private List<AppointmentResModel> recentAppointments = new();
+    private List<AppointmentResModel> upcomingToday = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var docs = await DoctorService.GetDoctorsAsync(1, 1000);
+        doctorCount = docs is { IsSuccess: true, Data: not null } ? docs.Data.TotalCount : 0;
+
+        var pats = await PatientService.GetPatientsAsync(1, 1000);
+        patientCount = pats is { IsSuccess: true, Data: not null } ? pats.Data.TotalCount : 0;
+
+        var appts = await AppointmentService.GetAppointmentsAsync();
+        if (appts is { IsSuccess: true, Data: not null })
+        {
+            var activeAppts = appts.Data.Where(a => a.Status != "Cancelled").ToList();
+            appointmentCount = activeAppts.Count;
+            totalRevenue = activeAppts.Sum(a => a.Cost);
+            recentAppointments = activeAppts.OrderByDescending(a => a.AppointmentDate).Take(5).ToList();
+            
+            var today = DateTime.Today;
+            upcomingToday = activeAppts
+                .Where(a => a.AppointmentDate?.Date == today && a.AppointmentDate >= DateTime.Now)
+                .OrderBy(a => a.AppointmentDate)
+                .Take(5)
+                .ToList();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(500); 
+            await RenderCharts();
+        }
+    }
+
+    private async Task RenderCharts()
+    {
+        var trendOptions = new
+        {
+            title = new { text = "" },
+            xAxis = new { categories = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }, labels = new { style = new { fontWeight = "800", color = "#94a3b8" } } },
+            yAxis = new { title = new { text = "" }, gridLineColor = "#f1f5f9" },
+            series = new[]
+            {
+                new { name = "Clinical Load", data = new[] { 18, 24, 15, 32, 28, 12, 6 }, color = "#10b981", type = "area", fillOpacity = 0.1 }
+            },
+            plotOptions = new { area = new { marker = new { enabled = false }, lineWidth = 4 } }
+        };
+
+        var distOptions = new
+        {
+            chart = new { type = "pie", backgroundColor = "transparent" },
+            title = new { text = "" },
+            plotOptions = new { pie = new { innerSize = "70%", borderWidth = 0, dataLabels = new { enabled = false } } },
+            series = new[]
+            {
+                new {
+                    name = "Volume",
+                    data = new[]
+                    {
+                        new { name = "Cardiology", y = 45, color = "#10b981" },
+                        new { name = "Neurology", y = 25, color = "#6366f1" },
+                        new { name = "Pediatrics", y = 15, color = "#fbbf24" },
+                        new { name = "General", y = 15, color = "#94a3b8" }
+                    }
+                }
+            }
+        };
+
+        await JSRuntime.InvokeVoidAsync("chartInterop.renderChart", "trend-chart", trendOptions);
+        await JSRuntime.InvokeVoidAsync("chartInterop.renderChart", "distribution-chart", distOptions);
+    }
+}

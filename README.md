@@ -1,13 +1,13 @@
 # Healthcare Appointment System (HCAS)
 
-A comprehensive healthcare appointment management system built with .NET 8, implementing the Mediator Pattern using MediatR for clean separation of concerns and CQRS architecture.
+A comprehensive healthcare appointment management system built with .NET 10, implementing the Mediator Pattern using MediatR for clean separation of concerns and CQRS architecture.
 
 ## Tech Stack
 
 ### Backend
-- **.NET 8.0** - Latest .NET framework
+- **.NET 10.0** - Latest .NET framework
 - **ASP.NET Core Web API** - RESTful API layer
-- **Entity Framework Core 9.0.9** - ORM for database operations
+- **Entity Framework Core 10.0.0** - ORM for database operations
 - **SQL Server** - Database
 - **MediatR 13.1.0** - Mediator pattern implementation
 - **Dapper 2.1.66** - Micro ORM for high-performance queries

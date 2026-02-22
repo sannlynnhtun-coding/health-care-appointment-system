@@ -1,0 +1,55 @@
+﻿@inherits LayoutComponentBase
+
+<div class="flex h-screen bg-slate-50 overflow-hidden relative">
+    <!-- Mobile Sidebar Backdrop -->
+    @if (isSidebarOpen)
+    {
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" @onclick="ToggleSidebar"></div>
+    }
+
+    <!-- Sidebar Wrapper -->
+    <aside class="fixed inset-y-0 left-0 w-72 bg-slate-900 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 @(isSidebarOpen ? "translate-x-0" : "-translate-x-full")">
+        <NavMenu OnNavigate="CloseSidebar" />
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <button class="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-lg md:hidden" @onclick="ToggleSidebar">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="text-slate-400 hidden xs:block">Pages /</span>
+                    <span class="font-semibold text-slate-700 truncate">Dashboard</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex flex-col items-end">
+                    <span class="text-xs font-bold text-slate-900 leading-none">Sann Lynn Htun</span>
+                    <span class="text-[10px] text-slate-400 font-medium">Administrator</span>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 font-black text-xs ring-2 ring-white shadow-sm">SH</div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto bg-slate-50/50">
+            <div class="p-4 md:p-8">
+                @Body
+            </div>
+        </main>
+    </div>
+</div>
+
+@code {
+    private bool isSidebarOpen = false;
+
+    private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
+    private void CloseSidebar() => isSidebarOpen = false;
+}
+
+<style>
+    /* Prevent standard Blazor sidebar styles from interfering */
+    .sidebar { display: none !important; }
+    .top-row { display: none !important; }
+    main { padding: 0 !important; }
+</style>
