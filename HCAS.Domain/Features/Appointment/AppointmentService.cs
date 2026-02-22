@@ -18,7 +18,8 @@ public static class AppointmentQuery
                 a.ScheduleId,
                 a.AppointmentDate, 
                 a.AppointmentNumber,
-                a.Status
+                a.Status,
+                a.Cost
             FROM Appointments a
             INNER JOIN Doctors d ON a.DoctorId = d.Id
             INNER JOIN Patients p ON a.PatientId = p.Id";
@@ -33,7 +34,8 @@ public static class AppointmentQuery
                 a.ScheduleId,
                 a.AppointmentDate, 
                 a.AppointmentNumber,
-                a.Status
+                a.Status,
+                a.Cost
             FROM Appointments a
             INNER JOIN Doctors d ON a.DoctorId = d.Id
             INNER JOIN Patients p ON a.PatientId = p.Id
@@ -46,9 +48,9 @@ public static class AppointmentQuery
 
     public const string Insert = @"
             INSERT INTO Appointments 
-                (DoctorId, PatientId, ScheduleId, AppointmentDate, AppointmentNumber, Status, del_flg) 
+                (DoctorId, PatientId, ScheduleId, AppointmentDate, AppointmentNumber, Status, Cost, del_flg) 
             OUTPUT INSERTED.Id
-            VALUES (@DoctorId, @PatientId, @ScheduleId, @AppointmentDate, @AppointmentNumber, @Status, @DelFlag)";
+            VALUES (@DoctorId, @PatientId, @ScheduleId, @AppointmentDate, @AppointmentNumber, @Status, @Cost, @DelFlag)";
 
     public const string UpdateStatus = @"
             UPDATE Appointments 
@@ -144,7 +146,8 @@ public class AppointmentService
                     PatientName = a.Patient.Name,
                     AppointmentDate = a.AppointmentDate,
                     AppointmentNumber = a.AppointmentNumber,
-                    Status = a.Status
+                    Status = a.Status,
+                    Cost = a.Cost
                 })
                 .ToListAsync();
 
@@ -244,6 +247,7 @@ public class AppointmentService
                 AppointmentDate = nextAvailableTime.Value,
                 AppointmentNumber = appointmentNumber,
                 Status = "Pending",
+                Cost = new Random().Next(4, 17) * 5000,
                 DelFlag = false
             };
 
@@ -258,6 +262,7 @@ public class AppointmentService
                 AppointmentDate = nextAvailableTime.Value,
                 AppointmentNumber = appointmentNumber,
                 Status = "Pending",
+                Cost = parameters.Cost,
                 DelFlg = false
             };
 

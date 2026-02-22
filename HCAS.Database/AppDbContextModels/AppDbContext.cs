@@ -35,6 +35,7 @@ public partial class AppDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Appointm__3214EC07859156F1");
 
             entity.Property(e => e.AppointmentDate).HasColumnType("datetime");
+            entity.Property(e => e.Cost).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.DelFlg).HasColumnName("del_flg");
             entity.Property(e => e.Status).HasMaxLength(50);
 

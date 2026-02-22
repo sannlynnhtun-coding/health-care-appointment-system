@@ -18,7 +18,7 @@ public partial class Appointment
     public int AppointmentNumber { get; set; }
 
     public string Status { get; set; } = null!;
-
+    public decimal Cost { get; set; }
     public bool DelFlg { get; set; }
 
     public virtual Doctor Doctor { get; set; } = null!;

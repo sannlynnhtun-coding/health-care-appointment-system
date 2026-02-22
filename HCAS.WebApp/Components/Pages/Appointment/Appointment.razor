@@ -73,6 +73,7 @@
                                                 <MudTh>Patient Name</MudTh>
                                                 <MudTh>Appointment Time</MudTh>
                                                 <MudTh>Appointment Number</MudTh>
+                                                <MudTh>Service Fee</MudTh>
                                                 <MudTh>Status</MudTh>
                                                 <MudTh>Actions</MudTh>
                                             </HeaderContent>
@@ -102,6 +103,11 @@
                                                     <MudChip T="int" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">
                                                         #@appointment.AppointmentNumber
                                                     </MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Service Fee">
+                                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="Color.Primary">
+                                                        @appointment.Cost.ToString("N0") MMK
+                                                    </MudText>
                                                 </MudTd>
                                                 <MudTd DataLabel="Status">
                                                     <MudChip T="string"
@@ -176,6 +182,7 @@
                                                 <MudTh>Patient Name</MudTh>
                                                 <MudTh>Appointment Time</MudTh>
                                                 <MudTh>Appointment Number</MudTh>
+                                                <MudTh>Service Fee</MudTh>
                                                 <MudTh>Status</MudTh>
                                                 <MudTh>Actions</MudTh>
                                             </HeaderContent>
@@ -205,6 +212,11 @@
                                                     <MudChip T="int" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">
                                                         #@appointment.AppointmentNumber
                                                     </MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Service Fee">
+                                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="Color.Secondary">
+                                                        @appointment.Cost.ToString("N0") MMK
+                                                    </MudText>
                                                 </MudTd>
                                                 <MudTd DataLabel="Status">
                                                     <MudChip T="string"

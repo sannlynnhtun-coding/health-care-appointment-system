@@ -148,6 +148,18 @@
                 </div>
             </MudCard>
         </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="5" Class="pa-6 text-center card-hover"
+                     Style="background: linear-gradient(135deg, #FF9A8B 0%, #FF6A88 55%, #FF99AC 100%); color: white; border-radius: 16px; cursor: pointer; border: none; position: relative; overflow: hidden; min-height: 180px;">
+                <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Large" Class="mb-3" Style="color: rgba(255,255,255,0.95); font-size: 48px;" />
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: rgba(255,255,255,0.98); font-weight: 600; letter-spacing: 0.5px;">Estimated Revenue</MudText>
+                    <MudText Typo="Typo.h2" Class="font-weight-bold" Style="color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 2.2rem;">@totalRevenue.ToString("N0") MMK</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); margin-top: 4px;">Based on @totalAppointments appointments</MudText>
+                </div>
+            </MudCard>
+        </MudItem>
     </MudGrid>
 
     <!-- Analytics Section -->
@@ -455,6 +467,7 @@
     
     // Summary totals
     private int totalAppointments = 0;
+    private decimal totalRevenue = 0;
     private int totalPatients = 0;
     private int totalDoctors = 0;
     private int totalStaff = 0;
@@ -541,6 +554,7 @@
                     .ToList();
 
                 totalAppointments = appointments.Count;
+                totalRevenue = appointments.Sum(a => a.Cost);
 
                 // Appointments over time
                 appointmentDates = appointments
