@@ -3,7 +3,7 @@
     "cleanUrls": true,
     "rewrites": [
         {
-            "source": "/(?!_framework/|css/|js/|favicon|icon-).*",
+            "source": "/:path*",
             "destination": "/index.html"
         }
     ]
