@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "tailwindcss -i wwwroot/css/app.css -o wwwroot/css/tailwind-output.css"
+  },
   "devDependencies": {
     "@tailwindcss/cli": "^4.2.0",
     "autoprefixer": "^10.4.24",
