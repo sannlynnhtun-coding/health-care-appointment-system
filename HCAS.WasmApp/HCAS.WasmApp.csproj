@@ -20,7 +20,7 @@
 
   <Target Name="Tailwind" BeforeTargets="Build">
     <Message Importance="high" Text="Building Tailwind CSS..." />
-    <Exec Command="node_modules\.bin\tailwindcss -i wwwroot/css/app.css -o wwwroot/css/tailwind-output.css" />
+    <Exec Command="npx tailwindcss -i wwwroot/css/app.css -o wwwroot/css/tailwind-output.css" />
   </Target>
 
 </Project>
