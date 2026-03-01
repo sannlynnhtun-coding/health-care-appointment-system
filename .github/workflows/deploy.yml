@@ -24,15 +24,14 @@ jobs:
         node-version: '20'
 
     - name: Install JS dependencies
-      run: |
-        cd HCAS.WasmApp
-        npm install
+      working-directory: HCAS.WasmApp
+      run: npm install
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore HCAS.WasmApp/HCAS.WasmApp.csproj
 
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build HCAS.WasmApp/HCAS.WasmApp.csproj --no-restore
 
     - name: Publish WasmApp
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
